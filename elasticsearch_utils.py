@@ -272,14 +272,14 @@ def get_must_not_query(filters):
 
                 filter_queries.append({"terms": {field: new_values}})
             else:
-                logging.exception('un-sufficient parameters provided, arguments provided - ',filter)
+                logging.exception('un sufficient parameters provided, arguments provided - ',filter)
         else:
             field = filter.get('field', None)
             value = filter.get('value', None)
             if field and value:
                 filter_queries.append(get_value_query(field, value))
             else:
-                logging.exception('un-sufficient parameters provided, arguments provided - ',filter)
+                logging.exception('un sufficient parameters and arguments provided - ',filter)
 
     filter_query = aggregate_query_must_not(filter_queries)
 
@@ -298,7 +298,7 @@ def get_filter_query_old(filters):
                 logging.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@START OR END DETECTED IN GET FILTER QUERY")
                 filter_queries.append(get_range_query_equality(field, start, end))
             else:
-                logging.exception('un-sufficient parameters provided, arguments provided - ',filter)
+                logging.exception('un sufficient parameters provided and arguments provided - ',filter)
         elif isinstance(filter.get('value', None), list):
             field = filter.get('field', None)
             value = filter.get('value', None)
@@ -313,7 +313,7 @@ def get_filter_query_old(filters):
 
                 filter_queries.append({"terms": {field: new_values}})
             else:
-                logging.exception('un-sufficient parameters provided, arguments provided - ',filter)
+                logging.exception('un-sufficient parameters provided - ',filter)
         else:
             field = filter.get('field', None)
             value = filter.get('value', None)
@@ -363,7 +363,7 @@ def get_filter_query(filters):
             if field and value:
                 filter_queries.append(get_value_query(field, value))
             else:
-                logging.exception('un-sufficient parameters provided, arguments provided - ',filter)
+                logging.exception('un-sufficient arguments provided - ',filter)
 
     filter_query = aggregate_query_filter(filter_queries)
 
@@ -446,7 +446,7 @@ def elasticsearch_search(input):
 
     try:
         data = search_data_with_json(index, elasticsearch_query)
-    except Exception as e:
+    except Exception:
         return [], 0
     return data
 
@@ -485,7 +485,7 @@ def insert(elastic_input):
 
     try:
         es.indices.create(index=index, ignore=400)
-    except Exception as e:
+    except Exception:
         pass
 
     es.index(index=index, id=_id, body=data)
