@@ -1208,14 +1208,10 @@ def download_report():
             logging.exception("ram calc went wrong")
             memory_consumed = None
             time_consumed = None
-<<<<<<< HEAD
-        
         logging.info("## Report API download_report Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
-=======
+
             
         logging.info(f"## Report API download_report Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
->>>>>>> ac4e86b389c9b7f689f41bd3b237ebc472f75146
-
 
         return return_data
 
@@ -1608,13 +1604,8 @@ def audit_report():
                         "session_id": "","status":json.dumps(return_json_data['flag'])}
   
         insert_into_audit(audit_data)
-<<<<<<< HEAD
-    except:
-        logging.info("issue in the query formation")
-=======
     except Exception as e:
         logging.info(f"issue in the query formation")
->>>>>>> ac4e86b389c9b7f689f41bd3b237ebc472f75146
     return jsonify(return_json_data)
 
 
@@ -1731,23 +1722,17 @@ def consolidated_report():
         tenant_id = data['ui_data']['tenant_id']
         db_config['tenant_id'] = tenant_id
         logging.info(f"Request Data is: {data}")
-<<<<<<< HEAD
-        #queue_db = DB('queues', **db_config)
-        #queue_id=data.get("queue_id",{})
-        #case_id=data['ui_data']['REFERENCE_ID']
+
         reports_name=data['ui_data']['report_name']
         extraction_db = DB('extraction', **db_config)
-        #group_db = DB("group_access", **db_config)
+
         queues_db = DB("queues", **db_config)
-        #user=data['ui_data']['REQUESTED_BY']
 
         start_date = data['start_date']
         end_date = data['end_date']
-        #zonee = data.get('zone', '')
         ist = pytz.timezone("Asia/Calcutta")
         timestamp = datetime.now(ist)
-        #timestamp_actual = timestamp
-=======
+
         reports_name=data['ui_data']['report_name']
         extraction_db = DB('extraction', **db_config)
         
@@ -1760,7 +1745,6 @@ def consolidated_report():
         ist = pytz.timezone("Asia/Calcutta")
         timestamp = datetime.now(ist)
 
->>>>>>> ac4e86b389c9b7f689f41bd3b237ebc472f75146
         timestamp1 = timestamp.strftime('%d-%m-%Y %H:%M:%S')
 
         timestamp = str(timestamp)[:-13]
@@ -2201,10 +2185,6 @@ def process_report_agri():
         start_time = tt()
     except Exception as e:
         logging.warning("Failed to start ram and time calc")
-<<<<<<< HEAD
-        
-=======
->>>>>>> ac4e86b389c9b7f689f41bd3b237ebc472f75146
         
     data = request.json
     trace_id = generate_random_64bit_string()
@@ -2495,12 +2475,3 @@ def process_report_agri():
     except Exception as e:
         logging.info("issue in the query formation")
     return jsonify(return_json_data)
-
-
-
-
-
-
-
-
-
