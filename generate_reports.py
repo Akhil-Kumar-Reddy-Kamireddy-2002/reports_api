@@ -359,7 +359,7 @@ def generate_report_file(tenant_id, report_id, data, reference_id,file_name_var,
                 data = nested_df
             logging.debug("#############3data: ", data)
 
-            jinja2_env = Environment()
+            jinja2_env = Environment(autoescape=False)
             print("report_template for jinja:", report_template)
             jinja2_tpl = jinja2_env.from_string(report_template)
             print("report_template for jinja2_tpl: ", jinja2_tpl)
@@ -604,7 +604,7 @@ def generate_report(ui_data):
                 nested_df = json.dumps((compress(json_df)), ensure_ascii=False)
                 data = nested_df.replace("'", "\"")
                 print(f"#############3data:{data}")
-                jinja2_env = Environment()
+                jinja2_env = Environment(autoescape=False)
                 print(f"report_template for jinja: {report_template}")
                 jinja2_tpl = jinja2_env.from_string(report_template)
                 print(f"report_template for jinja2_tpl: {jinja2_tpl}")
