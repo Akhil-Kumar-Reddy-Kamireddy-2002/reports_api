@@ -455,7 +455,6 @@ def get_reports_queue():
                                 'tenant_id': tenant_id
                             }
             reports_db = DB('reports', **reports_db_config)
-            #group_access_db = DB('group_access', **reports_db_config)
 
 
             user__=user
@@ -545,7 +544,6 @@ def get_reports_queue():
                     user_reports_data.loc[idx, "requested_datetime"] = str(
                         user_reports_data.loc[idx, "requested_datetime"])
                     if value:
-                        user_reports_data.loc[idx, "generated_datetime"] = ""
                         user_reports_data.loc[idx, "generated_datetime"] = None
                     else:
                         user_reports_data.loc[idx, "generated_datetime"] = str(
@@ -1247,7 +1245,6 @@ def generate_case_wise_accuracy(merged_df_dict,total_mandatory,mandatory_fields)
             logging.info(f"#### field_data is {field_data['fields_changed']}")
             field_changed=field_data['fields_changed']
             case_id=field_data['case_id']
-    #         if math.isnan(field_changed):
             if type(field_changed)==str:
                 fields_changed=json.dumps(field_changed)
                 field_changed=list(json.loads(json.loads(fields_changed)).keys())
@@ -1285,7 +1282,6 @@ def generate_excel(data,file_name):
     summary_data['Extracted Fields']=round(sum(extracted_fields),1)
     summary_data['Edited Fields']=round(sum(edited_fields),1)
     summary_data['Not Extracted']=round(sum(not_extracted_fields),1)
-    ## Formula to calculate Accuracy (correctly extracted fields / (total no.of fields- unavailable fields ))*100
     accuracy = 100-(100*sum(edited_fields)/sum(mandatory_fields))
     summary_data['Accuracy']=accuracy
 
@@ -1420,7 +1416,7 @@ def audit_report():
             span_name='folder_monitor',
             transport_handler=http_transport,
             sample_rate=0.5
-    ) as zipkin_context:
+    ):
         data = request.json
         logging.info(f"request data: {data}")
 
@@ -1567,7 +1563,6 @@ def audit_report():
             return_json_data['data'] = [{'row_data':outputs}]
             data['report_data'] = return_json_data
 
-            #generate_report({'tenant_id': tenant_id, **data})
             logging.info(f'{return_json_data}###############return_json_data')
             
         except Exception as e:
@@ -1714,7 +1709,7 @@ def consolidated_report():
             span_name='folder_monitor',
             transport_handler=http_transport,
             sample_rate=0.5
-    ) as zipkin_context:
+    ):
         data=request.json
         tenant_id = data['ui_data']['tenant_id']
         db_config['tenant_id'] = tenant_id
@@ -2202,7 +2197,7 @@ def process_report_agri():
             span_name='folder_monitor',
             transport_handler=http_transport,
             sample_rate=0.5
-    ) as zipkin_context:
+    ):
         data = request.json
         tenant_id = data['ui_data']['tenant_id']
         db_config['tenant_id'] = tenant_id
@@ -2472,3 +2467,12 @@ def process_report_agri():
     except Exception:
         logging.info("issue in the query formation")
     return jsonify(return_json_data)
+
+
+
+
+
+
+
+
+
