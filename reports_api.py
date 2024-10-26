@@ -380,7 +380,7 @@ def get_group_ids(user, db):
 
         try:
             group_dict = json.loads(group['group_definition'])
-        except Exception as e:
+        except Exception:
             logging.error('Could not load group definition dict.')
             break
 
@@ -396,8 +396,8 @@ def get_reports_queue():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except Exception as e:
-        logging.warning("Failed to start ram and time calc")
+    except Exception:
+        logging.warning("##Failed to start ram and time calc")
         
     data = request.json
 
@@ -434,7 +434,7 @@ def get_reports_queue():
 
             try:
                 offset = end_point - start_point
-            except Exception as e:
+            except Exception:
                 start_point = 1
                 end_point = 20
                 offset = 20
@@ -478,7 +478,7 @@ def get_reports_queue():
                 if end_point > total:
                     end_point = total
                 if start_point == 1:
-                    pass                
+                    logging.info("start_point is 1")                
                 else:
                     start_point += 1
                 print(f'#########Files got are: {files}')
@@ -491,7 +491,7 @@ def get_reports_queue():
                         if key=='TAGS' or key=='tags':
                             try:
                                 i[key]=ast.literal_eval(value)
-                            except Exception as e:
+                            except Exception:
                                 pass
                 end_point = len(files)
                 column_data_types = {"GENERATED_DATETIME":"unknown","REFERENCE_ID":"unknown","REPORT_NAME":"unknown","REQUESTED_BY":"unknown","REQUESTED_DATETIME":"unknown","STATUS":"unknown","TAGS":"unknown","generated_datetime":"string","reference_id":"number","report_name":"string","requested_by":"string","requested_datetime":"string","status":"date","tags":"string"}
@@ -570,13 +570,13 @@ def get_reports_queue():
                     print(f'report_data##{report_data}')
                     try:
                         report_data['TAGS']=json.loads(report_data['TAGS'])
-                    except Exception as e:
+                    except Exception:
                         pass
                  
 
                     user_reports_data_json[i] = report_data
 
-            except Exception as e:
+            except Exception:
                 message = 'Error fetching data from database'
                 logging.exception(message)
                 return jsonify({'flag': False, 'message': message})
@@ -685,7 +685,7 @@ def get_reports_queue():
             }
 
             
-        except Exception as e:
+        except Exception:
             logging.exception(
                 'Something went wrong while getting reports queue. Check trace.')
             response_data = {
@@ -696,9 +696,9 @@ def get_reports_queue():
                 (1024 * 1024 * 1024)
             end_time = tt()
             time_consumed = str(end_time-start_time)
-        except Exception as e:
-            logging.warning("Failed to calc end of ram and time")
-            logging.exception("ram calc went wrong")
+        except Exception:
+            logging.warning("#Failed to calc end of ram and time")
+            logging.exception("#ram calc went wrong@@@")
             memory_consumed = None
             time_consumed = None
             
@@ -712,8 +712,8 @@ def generate_reports():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except Exception as e:
-        logging.warning("Failed to start ram and time calc")
+    except Exception:
+        logging.warning("###Failed to start ram and time calc")
     # Get data from UI
     data = request.json
     logging.info(f"## Reports info request data -- {data}")
@@ -743,7 +743,7 @@ def generate_reports():
         try:
             filters["start_date"]=filters["start_date"]+' 00:00:00'
             filters["end_date"]=filters["end_date"]+' 23:59:59'
-        except Exception as e:
+        except Exception:
             filters["start_date"]='00-00-00 00:00:00'
             filters["end_date"]='00-00-00 00:00:00'
 
@@ -847,17 +847,15 @@ def generate_reports():
             average_query = f"SELECT AVG(process_time) AS ptime FROM report_requests WHERE report_id={report_id} AND report_name   ='{report_name}' AND status='Download' AND process_time IS NOT NULL"
             report_eta = report_master_db.execute_(average_query)
             eta = 0
-            if len(report_eta['ptime']) > 0:
-                if report_eta['ptime'][0] != None:
-                    eta = int(report_eta['ptime'][0])
+            if len(report_eta['ptime']) > 0 and report_eta['ptime'][0] != None:
+                eta = int(report_eta['ptime'][0])
            
             formatted_requested_time = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
             query = f"SELECT SUM(process_time) AS sum FROM report_requests WHERE status = 'Processing' AND requested_datetime < TO_DATE('{formatted_requested_time}', 'YYYY-MM-DD HH24:MI:SS')"
             report_eta = report_master_db.execute_(query)
             processing = 0
-            if len(report_eta['sum']) > 0:
-                if report_eta['sum'][0] != None:
-                    processing = int(report_eta['sum'][0])
+            if len(report_eta['sum']) > 0 and report_eta['sum'][0] != None:
+                processing = int(report_eta['sum'][0])
             eta += processing
             eta_datetime = dt.timedelta(seconds=int(eta))
             eta_datetime += timestamp_actual
@@ -887,12 +885,12 @@ def generate_reports():
                                 if filter_type.strip().lower() == "string":
                                     exec_query = exec_query.replace(
                                         "{"+column+"}", "'"+value+"'")
-                                    # exec_query=exec_query%(value)
+                                    
 
                                 elif filter_type.strip().lower() == "int" or filter_type.strip().lower() == "integer":
                                     exec_query = exec_query.replace(
                                         "{"+column+"}", value)
-                                    # exec_query=exec_query%(value)
+                                    
                                 elif filter_type.strip().lower() == "date_picker":
                                     logging.debug(f"BEFORE {exec_query}")
                                     exec_query = exec_query.replace(
@@ -909,7 +907,7 @@ def generate_reports():
                                         exec_query = exec_query.replace(
                                             "{"+column+"_end"+"}", "'"+value['end']+"'")
                                 elif filter_type.strip().lower() == "float":
-                                    pass
+                                    logging.info("filter_type is float")
 
                             except Exception as e:
                                 logging.exception(e)
@@ -975,7 +973,7 @@ def generate_reports():
                     try:
                         report_master_db.execute_(query)
                         logging.info("sheet name updated in report template")
-                    except Exception as e:
+                    except Exception:
                         logging.info(
                             "Sheet name is not updated in report template")
                     logging.info("before sheetname update")
@@ -1006,9 +1004,9 @@ def generate_reports():
                 (1024 * 1024 * 1024)
             end_time = tt()
             time_consumed = str(end_time-start_time)
-        except Exception as e:
+        except Exception:
             logging.warning("Failed to calc end of ram and time")
-            logging.exception("ram calc went wrong")
+            logging.exception("#ram calc went wrong")
             memory_consumed = None
             time_consumed = None
         
@@ -1026,8 +1024,8 @@ def get_report_view():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except Exception as e:
-        logging.warning("Failed to start ram and time calc")
+    except Exception:
+        logging.warning("####Failed to start ram and time calc")
         
     data = request.json
     
@@ -1063,7 +1061,7 @@ def get_report_view():
                 query1 = f"select * from `report_requests` WHERE parent_id = {request_id}"
                 html_out = db.execute_(query1)['html_report'].to_list()
             return_data = {'flag': True, 'data': html_out}
-        except Exception as e:
+        except Exception:
             logging.error(e)
             message = 'Report preview failed'
             return_data = {'flag': False, 'data': message}
@@ -1074,8 +1072,8 @@ def get_report_view():
             end_time = tt()
             time_consumed = str(end_time-start_time)
         except Exception as e:
-            logging.warning("Failed to calc end of ram and time")
-            logging.exception("ram calc went wrong")
+            logging.warning("##Failed to calc end of ram and time")
+            logging.exception("###ram calc went wrong##")
             memory_consumed = None
             time_consumed = None
         logging.info(f"## Reports API get_report_view Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
@@ -1086,8 +1084,8 @@ def download_report():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except Exception as e:
-        logging.warning("Failed to start ram and time calc")
+    except Exception:
+        logging.warning("#####Failed to start ram and time calc")
     # Get data from UI
     data = request.json
     logging.info(f'Recieved data: {data}')
@@ -1157,7 +1155,7 @@ def download_report():
             try:
                 with open(report_path, 'rb') as f:
                     report_blob = base64.b64encode(f.read())
-            except Exception as e:
+            except Exception:
                 timestamp_match = re.search(r'_(\d{2})_(\d{2})\.xlsx', str(report_file_name))
                 if timestamp_match:
                     hours, minutes = map(int, timestamp_match.groups())
@@ -1193,7 +1191,7 @@ def download_report():
         try:
             logging.debug('DOWNLOADING REPORT')
             return_data = {'flag': True, 'blob': report_blob.decode('utf-8'), 'filename': f'{report_file_name}'}
-        except Exception as e:
+        except Exception:
             message = 'Something went wrong while downloading report.'
             logging.exception(message)
             return_data = {'flag': False, 'message': message}
@@ -1203,9 +1201,9 @@ def download_report():
                 (1024 * 1024 * 1024)
             end_time = tt()
             time_consumed = str(end_time-start_time)
-        except Exception as e:
-            logging.warning("Failed to calc end of ram and time")
-            logging.exception("ram calc went wrong")
+        except Exception:
+            logging.warning("###Failed to calc end of ram and time")
+            logging.exception("####ram calc went wrong####")
             memory_consumed = None
             time_consumed = None
         logging.info("## Report API download_report Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
@@ -1219,7 +1217,7 @@ def download_report():
 
 
 def get_total_mandatory_fields(queues_db):
-    get_mad_filds=f"SELECT display_name,unique_name FROM `field_definition` WHERE mandatory=1"
+    get_mad_filds="SELECT display_name,unique_name FROM `field_definition` WHERE mandatory=1"
     mad_df=queues_db.execute_(get_mad_filds)
     mandatory_fields=mad_df['unique_name'].to_list()
     total_mandatory_fields=len(mandatory_fields)
@@ -1329,8 +1327,9 @@ def generate_accuracy_report():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except Exception as e:
-        logging.warning("Failed to start ram and time calc")
+        logging.info(f"memory_before is {memory_before} and start_time is {start_time}")
+    except Exception:
+        logging.warning("####Failed to start ram and time calc##")
         
     data = request.json
 
@@ -1350,7 +1349,7 @@ def generate_accuracy_report():
         end_date= end_date.strftime("%Y-%m-%d")
         logging.info(f"end date after increment is {end_date} and type is {type(end_date)}")
     else:
-        pass
+        logging.info("else block executed")
 
     attr = ZipkinAttrs(
         trace_id=generate_random_64bit_string(),
@@ -1399,8 +1398,8 @@ def audit_report():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except Exception as e:
-        logging.warning("Failed to start ram and time calc")
+    except Exception:
+        logging.warning("###Failed to start ram and time calc###")
         
     data = request.json  
     tenant_id = data['ui_data']['tenant_id']
@@ -1463,7 +1462,6 @@ def audit_report():
                 
                 grouped = audit_case_data.groupby('ingested_queue')
                 
-                #none_group = audit_case_data[audit_case_data['ingested_queue'].isna()]
             
                 query_file_recieved = f"SELECT CREATED_DATE from PROCESS_QUEUE where case_id like '%{case_id}%'"
                 df_file_recieved = queue_db.execute_(query_file_recieved)
@@ -1475,7 +1473,7 @@ def audit_report():
                     party_id=df_party['party_id'][0]
                     party_name = df_party['party_name'][0]
                     moved_by = df_party['MOVED_BY'][0]
-                except Exception as e:
+                except Exception:
                     party_id=None
                     party_name = None
                     moved_by = None
@@ -1490,16 +1488,16 @@ def audit_report():
                 # Calculate relevant timestamps and time differences
                 try:
                     file_received_time = desired_updated_date
-                except :
+                except Exception:
                     pass
                 try:
                     maker_ingestion_time = grouped.get_group('maker_queue')['updated_date'].min()
-                except Exception as e:
+                except Exception:
                     pass
             
                 try:
                     completed_ingested_time = grouped.get_group('accepted_queue')['updated_date'].min()
-                except Exception as e:
+                except Exception:
                     
                     completed_ingested_time = '0000-00-00 00:00:00'
                     
@@ -1507,7 +1505,7 @@ def audit_report():
 
                 try:
                     rejected_ingested_time = grouped.get_group('rejected_queue')['updated_date'].min()
-                except Exception as e:
+                except Exception:
                     
                     rejected_ingested_time = '0000-00-00 00:00:00'
                     
@@ -1518,13 +1516,13 @@ def audit_report():
                     try:
                         
                         Total_handling_time= completed_ingested_time - maker_ingestion_time
-                    except Exception as e:
+                    except Exception:
                         Total_handling_time = '0000-00-00 00:00:00'
                 else:
                     try:
                         
                         Total_handling_time=rejected_ingested_time - maker_ingestion_time
-                    except Exception as e:
+                    except Exception:
                         Total_handling_time = '0000-00-00 00:00:00'
         
                 output = {
@@ -1587,8 +1585,8 @@ def audit_report():
         memory_consumed = f"{memory_consumed:.10f}"
         logging.info(f"checkpoint memory_after - {memory_after},memory_consumed - {memory_consumed}, end_time - {end_time}")
         time_consumed = str(round(end_time-start_time,3))
-    except Exception as e:
-        logging.warning("Failed to calc end of ram and time")
+    except Exception:
+        logging.warning("####Failed to calc end of ram and time")
         logging.exception("ram calc went wrong")
         memory_consumed = None
         time_consumed = None
@@ -1604,8 +1602,8 @@ def audit_report():
                         "session_id": "","status":json.dumps(return_json_data['flag'])}
   
         insert_into_audit(audit_data)
-    except Exception as e:
-        logging.info(f"issue in the query formation")
+    except Exception:
+        logging.info("issue in the query formation")
     return jsonify(return_json_data)
 
 
@@ -1637,7 +1635,7 @@ def create_dataframe_from_json(json_data_list):
                                 numeric_value = extract_numeric_value(replace_empty_with_none(nested_value))
                                 columns_data[column_name].append(numeric_value)
                         except json.JSONDecodeError as json_error:
-                            print("Error decoding JSON at index {idx}: {json_error}")
+                            logging.info(f"Error decoding JSON at index {idx}: {json_error}")
                             # Handle the error if needed
                     else:
                         # Handle the case where value is None
@@ -1681,7 +1679,6 @@ def convert_to_custom_format(date_str):
             return dt.strftime("%d-%b-%y")
         except ValueError as e:
             logging.info(f"{e}###wrong format")
-            pass
 
     return None
 
@@ -1693,8 +1690,8 @@ def consolidated_report():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except Exception as e:
-        logging.warning("Failed to start ram and time calc")
+    except Exception:
+        logging.warning("#Failed to start ram and time calc#")
         
     data = request.json
     tenant_id = data['ui_data']['tenant_id']
@@ -1811,7 +1808,7 @@ def consolidated_report():
                         try:
                             for i in values:
                                 final_result[i]=values[i][0]
-                        except Exception as e:
+                        except Exception:
                             logging.info("exception in appending final_result")
                         if not Party.empty:
                             query = f"SELECT COMPONENT_NAME, MARGIN from AGE_MARGIN_WORKING_UAT where PARTY_ID = '{Party['party_id'][0]}'"
@@ -2154,9 +2151,9 @@ def consolidated_report():
         memory_consumed = f"{memory_consumed:.10f}"
         logging.info(f"checkpoint memory_after - {memory_after},memory_consumed - {memory_consumed}, end_time - {end_time}")
         time_consumed = str(round(end_time-start_time,3))
-    except Exception as e:
-        logging.warning("Failed to calc end of ram and time")
-        logging.exception("ram calc went wrong")
+    except Exception:
+        logging.warning("#####Failed to calc end of ram and time")
+        logging.exception("#ram calc went wrong#")
         memory_consumed = None
         time_consumed = None
         
@@ -2171,7 +2168,7 @@ def consolidated_report():
                         "session_id": "","status":json.dumps(return_json_data['flag'])}
         
         insert_into_audit(audit_data)
-    except Exception as e:
+    except Exception:
         logging.info("issue in the query formation")
     return jsonify(return_json_data)
 
@@ -2183,7 +2180,7 @@ def process_report_agri():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except Exception as e:
+    except Exception:
         logging.warning("Failed to start ram and time calc")
         
     data = request.json
@@ -2456,9 +2453,9 @@ def process_report_agri():
         memory_consumed = f"{memory_consumed:.10f}"
         logging.info(f"checkpoint memory_after - {memory_after},memory_consumed - {memory_consumed}, end_time - {end_time}")
         time_consumed = str(round(end_time-start_time,3))
-    except Exception as e:
-        logging.warning("Failed to calc end of ram and time")
-        logging.exception("ram calc went wrong")
+    except Exception:
+        logging.warning("######Failed to calc end of ram and time")
+        logging.exception("##ram calc went wrong")
         memory_consumed = None
         time_consumed = None
 
@@ -2472,6 +2469,6 @@ def process_report_agri():
                     "session_id": "","status":json.dumps(return_json_data['flag'])}
     
         insert_into_audit(audit_data)
-    except Exception as e:
+    except Exception:
         logging.info("issue in the query formation")
     return jsonify(return_json_data)
