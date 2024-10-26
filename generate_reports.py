@@ -662,7 +662,7 @@ def generate_report(ui_data):
                 l.append(report_data['row_data'])
                 report_data['row_data']=l
             except Exception as e:
-                report_data = report_data
+                logging.info("#######Error occured at generating report throught jinja template")
             generate_report_file(tenant_id, report_id, report_data, reference_id,file_name, sheet_dict, excel_flag)
             logging.info('Reported generated')
         else:
