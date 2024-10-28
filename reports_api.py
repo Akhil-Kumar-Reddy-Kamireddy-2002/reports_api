@@ -612,11 +612,10 @@ def get_reports_queue():
 
             for i, report in enumerate(report_dict):
                 filters_query = f"select * from report_filter where report_id={report['report_id']}"
-                filter_list = reports_db.execute_(
-                    filters_query).to_dict('records')
+                filter_list = reports_db.execute_(filters_query).to_dict('records')
                 if len(filter_list) > 0:
                     for j, filter_data in enumerate(filter_list):
-                        if filter_data['filter_options'] != "" or filter_data['filter_options'] is not None:
+                        if filter_data['filter_options'] != "" and filter_data['filter_options'] is not None:
                             string_list = filter_data["filter_options"].split("#$")
                             logging.info(
                                 f"########### FIlter : {filter_data}and Filter Options:{string_list}")
@@ -1235,8 +1234,14 @@ def get_ocr_fields(extraction_db,mandatory_fields,start_date,end_date):
 
 ### MERGE the dataframes to proceed furthur
 def merge_df(df1,df2):
-    merged_df = pd.merge(df1, df2, on='case_id', how='right')
+    merged_df = pd.merge(df1, df2, on='case_id', how='right',validate='one_to_many')
     return merged_df
+
+
+MANDATORY_FIELDS = 'Mandatory Fields'
+EXTRACTED_FIELDS = 'Extracted Fields'
+EDITED_FIELDS = 'Edited Fields'
+NOT_EXTRACTED_FIELDS = 'Not Extracted'
 
 def generate_case_wise_accuracy(merged_df_dict,total_mandatory,mandatory_fields):
     case_accuracy={}
@@ -1519,6 +1524,13 @@ def audit_report():
                         Total_handling_time=rejected_ingested_time - maker_ingestion_time
                     except Exception:
                         Total_handling_time = '0000-00-00 00:00:00'
+
+
+                CASE_CREATION_TIME_STAMP = 'Case creation time stamp'
+                MAKER_QUEUE_TIME_STAMP = 'Maker queue in Time Stamp'
+                COMPLETED_QUEUE_TIME_STAMP = 'Completed queue in time Stamp'
+                REJECTED_QUEUE_TIME_STAMP = 'Rejected queue in time Stamp'
+                TOTAL_HANDLING_TIME = 'Total Handling time'
         
                 output = {
                         'serial_number': serial_number,
@@ -1548,6 +1560,9 @@ def audit_report():
                 logging.info(f"output{output}")
             
             logging.info(f"outputs##{outputs}")
+
+            SUCCESS_MESSAGE_AR = 'Successfully generated the report'
+
             for output in outputs:
                 output['Case creation time stamp'] = str(output['Case creation time stamp'])
                 output['Maker queue in Time Stamp'] = str(output['Maker queue in Time Stamp'])
@@ -1556,20 +1571,23 @@ def audit_report():
                 output['Total Handling time'] = str(output['Total Handling time'])
             return_json_data = {}
             logging.info(f'{return_json_data}###return_json_data#########return_json_data')
-            return_json_data['message']='Successfully generated the report'
+            return_json_data['message']='SUCCESS_MESSAGE_AR'
             return_json_data['excel_flag']= 1
             return_json_data['flag'] = True
             return_json_data['data'] = [{'row_data':outputs}]
             data['report_data'] = return_json_data
 
             logging.info(f'{return_json_data}###############return_json_data')
+
+
+            FAILED_MESSAGE_AR = 'Failed!!'
             
         except Exception as e:
             logging.info(f"error at audit_Report {e}")
             logging.debug(f"{e} ####issue")
             return_json_data = {}
             return_json_data['flag'] = False
-            return_json_data['message'] = 'Failed!!'
+            return_json_data['message'] = 'FAILED_MESSAGE_AR'
             return jsonify(return_json_data)
     try:
         memory_after = measure_memory_usage()
@@ -1587,17 +1605,18 @@ def audit_report():
         
 
     # insert audit
+    NEW_FILE_RECEIVED_AR = "New file received"
     try:
         audit_data = {"tenant_id": tenant_id, "user_": "", "case_id": "",
                         "api_service": "folder_monitor", "service_container": "reportsapi",
-                        "changed_data": "New file received","tables_involved": "","memory_usage_gb": str(memory_consumed), 
+                        "changed_data": NEW_FILE_RECEIVED_AR,"tables_involved": "","memory_usage_gb": str(memory_consumed), 
                         "time_consumed_secs": time_consumed, "request_payload": json.dumps(data), 
                         "response_data": json.dumps(return_json_data), "trace_id": trace_id,
                         "session_id": "","status":json.dumps(return_json_data['flag'])}
   
         insert_into_audit(audit_data)
     except Exception:
-        logging.info("issue in the query formation")
+        logging.info("#issue in the query formation#")
     return jsonify(return_json_data)
 
 
@@ -2026,6 +2045,9 @@ def consolidated_report():
                 final_data = {'row_data': []}
                 res = res.drop(columns=['COMMENTS','Hold Comments'])
 
+
+                SUCCESS_MESSAGE_CR='Successfully generated the report'
+
                 # Iterating through each entry in the given data dictionary
                 for i in range(len(given_data['ACE Case ID'])):
                     row_entry = {
@@ -2119,20 +2141,21 @@ def consolidated_report():
             try:
 
                 return_json_data = {}
-                return_json_data['message']='Successfully generated the report'
+                SUCCESS_MESSAGE_CR=''
+                return_json_data['message']='SUCCESS_MESSAGE_CR'
                 return_json_data['excel_flag']= 1
                 return_json_data['flag'] = True
                 return_json_data['data'] = final_data
                 
                 data['report_data'] = return_json_data
                 logging.info(f'{return_json_data}###############return_json_data')
-                
+                FAILED_MESSAGE_CR='Failed!!'
             except Exception as e:
                 logging.info(f"error at process_Report {e}")
                 logging.debug(f"{e} ####issue")
                 return_json_data = {}
                 return_json_data['flag'] = False
-                return_json_data['message'] = 'Failed!!'
+                return_json_data['message'] = 'FAILED_MESSAGE_CR'
 
         except Exception as e:
             logging.exception(f'Something went wrong exporting data : {e}')
@@ -2153,17 +2176,19 @@ def consolidated_report():
         
 
     # insert audit
+    NEW_FILE_RECEIVED_CR = "New file received"
+
     try:
         audit_data = {"tenant_id": tenant_id, "user_": "", "case_id": "",
                         "api_service": "consolidated_report", "service_container": "reportsapi",
-                        "changed_data": "New file received","tables_involved": "","memory_usage_gb": str(memory_consumed), 
+                        "changed_data": NEW_FILE_RECEIVED_CR,"tables_involved": "","memory_usage_gb": str(memory_consumed), 
                         "time_consumed_secs": time_consumed, "request_payload": json.dumps(data), 
                         "response_data": json.dumps(return_json_data), "trace_id": trace_id,
                         "session_id": "","status":json.dumps(return_json_data['flag'])}
         
         insert_into_audit(audit_data)
     except Exception:
-        logging.info("issue in the query formation")
+        logging.info("##issue in the query formation##")
     return jsonify(return_json_data)
 
 
@@ -2417,10 +2442,13 @@ def process_report_agri():
                 }
 
                     final_data['row_data'].append(row_entry)
-            try:
+  
+  
+            try: 
+                SUCCESS_MESSAGE_PRA='Successfully generated the report'
 
                 return_json_data = {}
-                return_json_data['message']='Successfully generated the report'
+                return_json_data['message']='SUCCESS_MESSAGE_PRA'
                 return_json_data['excel_flag']= 1
                 return_json_data['flag'] = True
                 return_json_data['data'] = final_data
@@ -2429,12 +2457,15 @@ def process_report_agri():
 
                 logging.info(f'{return_json_data}###############return_json_data')
                 return jsonify(return_json_data)
+            
+                FAILED_MESSAGE_PRA='Failed!!'
+
             except Exception as e:
                 logging.info(f"error at process_Report {e}")
                 logging.debug(f"{e} ####issue")
                 return_json_data = {}
                 return_json_data['flag'] = False
-                return_json_data['message'] = 'Failed!!'
+                return_json_data['message'] = ' FAILED_MESSAGE_PRA'
                 
         except Exception as e:
             logging.exception(f'Something went wrong exporting data : {e}')
@@ -2454,10 +2485,12 @@ def process_report_agri():
         time_consumed = None
 
     # insert audit
+         
+    NEW_FILE_RECEIVED_PRA="New file received"
     try:
         audit_data = {"tenant_id": tenant_id, "user_": "", "case_id": "",
                     "api_service": "process_report_agri", "service_container": "reportsapi",
-                    "changed_data": "New file received","tables_involved": "","memory_usage_gb": str(memory_consumed), 
+                    "changed_data": NEW_FILE_RECEIVED_PRA,"tables_involved": "","memory_usage_gb": str(memory_consumed), 
                     "time_consumed_secs": time_consumed, "request_payload": json.dumps(data), 
                     "response_data": json.dumps(return_json_data), "trace_id": trace_id,
                     "session_id": "","status":json.dumps(return_json_data['flag'])}
