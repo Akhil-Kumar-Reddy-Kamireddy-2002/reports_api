@@ -587,8 +587,8 @@ def generate_report(ui_data):
         # if report_to_excel_flag:
         if report_to_excel_flag and report_data:
             try:
-                report_data=pd.DataFrame.from_dict(json_normalize(report_data), orient='columns')
-                #report_data = pd.json_normalize(report_data) if isinstance(report_data, list) else pd.DataFrame.from_dict(report_data, orient='columns')
+            
+                report_data = pd.json_normalize(report_data) if isinstance(report_data, list) else pd.DataFrame.from_dict(report_data, orient='columns')
             except Exception as e:
                 report_data=pd.DataFrame.from_dict(report_data, orient='columns')
                 
@@ -646,7 +646,7 @@ def generate_report(ui_data):
 
                     html = html + sub_html + '</table>'
                     html = html.replace('\n', '')
-                    #html = re.sub('\n', '', html)
+                
 
                 query = f"UPDATE report_requests SET html_report='{html}' WHERE reference_id='{reference_id}'"
                 reports_db.execute_(query)
