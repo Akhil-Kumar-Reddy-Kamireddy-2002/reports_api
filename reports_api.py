@@ -616,13 +616,13 @@ def get_reports_queue():
                     filters_query).to_dict('records')
                 if len(filter_list) > 0:
                     for j, filter_data in enumerate(filter_list):
-                        if filter_data['filter_options'] is not "" or filter_data['filter_options'] is not None:
+                        if filter_data['filter_options'] != "" or filter_data['filter_options'] is not None:
                             string_list = filter_data["filter_options"].split("#$")
                             logging.info(
                                 f"########### FIlter : {filter_data}and Filter Options:{string_list}")
                             if len(string_list) > 0:
                                 for k, string_json in enumerate(string_list):
-                                    if string_json is not '' and string_json is not "":
+                                    if string_json != '' and string_json != "":
                                         string_list[k] = json.loads(string_json)
                             filter_list[j]["filter_options"] = string_list
                 report['filters'] = filter_list
@@ -1245,7 +1245,7 @@ def generate_case_wise_accuracy(merged_df_dict,total_mandatory,mandatory_fields)
             logging.info(f"#### field_data is {field_data['fields_changed']}")
             field_changed=field_data['fields_changed']
             case_id=field_data['case_id']
-            if type(field_changed)==str:
+            if isinstance(field_changed, str):
                 fields_changed=json.dumps(field_changed)
                 field_changed=list(json.loads(json.loads(fields_changed)).keys())
                 filtered_fields_changed = [field for field in field_changed if field in mandatory_fields]
@@ -1421,7 +1421,6 @@ def audit_report():
         logging.info(f"request data: {data}")
 
         try:
-            #date_filters = data.get('filters',{})
             start_date = data['start_date']
             end_date = data['end_date']
             user=data['ui_data']['REQUESTED_BY']
