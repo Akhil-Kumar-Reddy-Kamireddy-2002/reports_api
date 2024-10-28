@@ -762,7 +762,8 @@ def generate_reports():
         logging.info(f"debugging report_id from front_end : {report_id}")
 
         # Generate file name if not given
-        ist = pytz.timezone("Asia/Calcutta")
+        a="Asia/Calcutta"
+        ist = pytz.timezone(a)
         timestamp = datetime.now(ist)
         timestamp_actual = timestamp
         timestamp1 = timestamp.strftime('%d-%m-%Y %H:%M:%S')
@@ -1239,12 +1240,15 @@ def merge_df(df1,df2):
 
 
 MANDATORY_FIELDS = 'Mandatory Fields'
-EXTRACTED_FIELDS = 'Extracted Fields'
-EDITED_FIELDS = 'Edited Fields'
-NOT_EXTRACTED_FIELDS = 'Not Extracted'
+
+
+
 
 def generate_case_wise_accuracy(merged_df_dict,total_mandatory,mandatory_fields):
     case_accuracy={}
+    EXTRACTED_FIELDS = 'Extracted Fields'
+    EDITED_FIELDS = 'Edited Fields'
+    NOT_EXTRACTED_FIELDS = 'Not Extracted'
     for field_data in merged_df_dict:
         try:
             logging.info(f"#### field_data is {field_data['fields_changed']}")
@@ -1260,14 +1264,14 @@ def generate_case_wise_accuracy(merged_df_dict,total_mandatory,mandatory_fields)
                 not_extracted_flds=len(empty_vals)
                 edited_flds=len(filtered_fields_changed)
                 extract_fields_cnt=total_mandatory-not_extracted_flds
-                case_accuracy[case_id]={'Mandatory Fields':total_mandatory,'Extracted Fields':extract_fields_cnt,'Edited Fields':edited_flds,'Not Extracted':not_extracted_flds}
+                case_accuracy[case_id]={MANDATORY_FIELDS:total_mandatory,EXTRACTED_FIELDS:extract_fields_cnt,EDITED_FIELDS:edited_flds,NOT_EXTRACTED_FIELDS:not_extracted_flds}
             else:
                 condition = lambda x: x is None
                 # Using a list comprehension
                 empty_vals = [value for value in field_data.values() if condition(value)]
                 not_extracted_flds=len(empty_vals)
                 extract_fields_cnt=total_mandatory-not_extracted_flds
-                case_accuracy[case_id]={'Mandatory Fields':total_mandatory,'Extracted Fields':extract_fields_cnt,'Edited Fields':0,'Not Extracted':not_extracted_flds}
+                case_accuracy[case_id]={MANDATORY_FIELDS:total_mandatory,EXTRACTED_FIELDS:extract_fields_cnt,EDITED_FIELDS:0,NOT_EXTRACTED_FIELDS:not_extracted_flds}
         except Exception as e:
             logging.info(f"### Exception occured {e}")
             continue
@@ -1276,17 +1280,22 @@ def generate_case_wise_accuracy(merged_df_dict,total_mandatory,mandatory_fields)
 
 #### Generate excel with the Final data
 def generate_excel(data,file_name):
+    EXTRACTED_FIELDS_G='Extracted Fields'
+    EDITED_FIELDS_G='Edited Fields'
+    NOT_EXTRACTED_FIELDS_G='Not Extracted'
+
+
     df = pd.DataFrame(data).T
     summary_data={}
-    mandatory_fields=df['Mandatory Fields'].to_list()
-    extracted_fields=df['Extracted Fields'].to_list()
-    edited_fields=df['Edited Fields'].to_list()
-    not_extracted_fields=df['Not Extracted'].to_list()
+    mandatory_fields=df[MANDATORY_FIELDS].to_list()
+    extracted_fields=df(EXTRACTED_FIELDS_G).to_list()
+    edited_fields=df[ EDITED_FIELDS_G].to_list()
+    not_extracted_fields=df[NOT_EXTRACTED_FIELDS_G].to_list()
     
-    summary_data['Mandatory Fields']=round(sum(mandatory_fields),1)
-    summary_data['Extracted Fields']=round(sum(extracted_fields),1)
-    summary_data['Edited Fields']=round(sum(edited_fields),1)
-    summary_data['Not Extracted']=round(sum(not_extracted_fields),1)
+    summary_data[MANDATORY_FIELDS]=round(sum(mandatory_fields),1)
+    summary_data[EXTRACTED_FIELDS_G]=round(sum(extracted_fields),1)
+    summary_data[ EDITED_FIELDS_G]=round(sum(edited_fields),1)
+    summary_data[NOT_EXTRACTED_FIELDS_G]=round(sum(not_extracted_fields),1)
     accuracy = 100-(100*sum(edited_fields)/sum(mandatory_fields))
     summary_data['Accuracy']=accuracy
 
@@ -1526,13 +1535,17 @@ def audit_report():
                         Total_handling_time = '0000-00-00 00:00:00'
 
 
-                CASE_CREATION_TIME_STAMP = 'Case creation time stamp'
+               
                 MAKER_QUEUE_TIME_STAMP = 'Maker queue in Time Stamp'
                 COMPLETED_QUEUE_TIME_STAMP = 'Completed queue in time Stamp'
                 REJECTED_QUEUE_TIME_STAMP = 'Rejected queue in time Stamp'
                 TOTAL_HANDLING_TIME = 'Total Handling time'
+
+                CASE_CREATION_TIME_STAMP = 'Case creation time stamp'
         
                 output = {
+
+                       
                         'serial_number': serial_number,
                     
                         'case_id': case_id,
@@ -1542,12 +1555,12 @@ def audit_report():
                         'CLIMS Create API Request time':'NA',
                         'CLIMS Create API Response Time':'NA',
                         
-                        'Case creation time stamp': file_received_time,
+                        CASE_CREATION_TIME_STAMP: file_received_time,
             
-                        'Maker queue in Time Stamp': maker_ingestion_time,
-                        'Completed queue in time Stamp':completed_ingested_time,
-                        'Rejected queue in time Stamp':rejected_ingested_time,
-                        'Total Handling time':Total_handling_time,
+                        MAKER_QUEUE_TIME_STAMP: maker_ingestion_time,
+                        COMPLETED_QUEUE_TIME_STAMP:completed_ingested_time,
+                        REJECTED_QUEUE_TIME_STAMP:rejected_ingested_time,
+                        TOTAL_HANDLING_TIME:Total_handling_time,
                         'Maker Name':moved_by,
                         'User ID':user
 
@@ -1564,11 +1577,11 @@ def audit_report():
             SUCCESS_MESSAGE_AR = 'Successfully generated the report'
 
             for output in outputs:
-                output['Case creation time stamp'] = str(output['Case creation time stamp'])
-                output['Maker queue in Time Stamp'] = str(output['Maker queue in Time Stamp'])
-                output['Completed queue in time Stamp'] = str(output['Completed queue in time Stamp'])
-                output['Rejected queue in time Stamp'] = str(output['Rejected queue in time Stamp'])
-                output['Total Handling time'] = str(output['Total Handling time'])
+                output[ CASE_CREATION_TIME_STAMP] = str(output[ CASE_CREATION_TIME_STAMP])
+                output[ MAKER_QUEUE_TIME_STAMP] = str(output[ MAKER_QUEUE_TIME_STAMP])
+                output[COMPLETED_QUEUE_TIME_STAMP] = str(output[COMPLETED_QUEUE_TIME_STAMP])
+                output[REJECTED_QUEUE_TIME_STAMP] = str(output[REJECTED_QUEUE_TIME_STAMP])
+                output[TOTAL_HANDLING_TIME] = str(output[TOTAL_HANDLING_TIME])
             return_json_data = {}
             logging.info(f'{return_json_data}###return_json_data#########return_json_data')
             return_json_data['message']=SUCCESS_MESSAGE_AR
@@ -1763,7 +1776,10 @@ def consolidated_report():
         logging.info("reports_name{reports_name}")
         try:
             def final_result_fun(case_ids,res_columns,queue,case_id_db_data):
+                
                 print(f'########case_id_db_data is : {case_id_db_data}')
+                
+
                 if len(case_id_db_data):
                     if len(case_id_db_data)==1:
                         case_id_tuple = case_id_db_data['case_id'][0]
@@ -1793,13 +1809,19 @@ def consolidated_report():
                             """
                 df=extraction_db.execute_(query)
                 logging.info(f"query df is {df}")
+                case_id_frf='ACE Case ID'
+                party_id_frf='Party ID'
+                party_name_frf='Party name'
+                user_name_frf='User name'
+                drawing_power_amount_frf='Drawing power Amount'
+                hold_comments_frf='Hold Comments'
                 df.rename(columns={
-                    'case_id': 'ACE Case ID',
-                    'party_id': 'Party ID',
-                    'party_name': 'Party name',
-                    'customer_name': 'User name',
-                    'drawing_power': 'Drawing power Amount',
-                    'hold_comments':'Hold Comments',
+                    'case_id': case_id_frf,
+                    'party_id': party_id_frf ,
+                    'party_name':  party_name_frf,
+                    'customer_name':user_name_frf,
+                    'drawing_power':drawing_power_amount_frf,
+                    'hold_comments':hold_comments_frf,
                     'rejected_comments':'Rejected Comments'
                 }, inplace=True)
                 res=[]
@@ -1855,7 +1877,7 @@ def consolidated_report():
                         logging.info(f"Error at Printing  Json data {e}")
                 result_df = pd.DataFrame(res)
                 renamed_columns = {
-                    'Drawing Power': 'Drawing power Amount',
+                    'Drawing Power': drawing_power_amount_frf,
                     'Raw Materials': 'Raw materials',
                     'Total Creditors': 'Creditors',
                     'Work in Process': 'Work in progress',
@@ -1906,12 +1928,17 @@ def consolidated_report():
                 final_data = {'row_data': []}
 
                 # Iterating through each entry in the given data dictionary
-                for i in range(len(given_data['ACE Case ID'])):
+                ace_case_id_cr='ACE Case ID'
+                party_id_cr='Party ID'
+                party_name_cr='Party name'
+                user_name_cr='User name'
+                drawing_power_amount_cr='Drawing power Amount'
+                for i in range(len(given_data[ace_case_id_cr])):
                     row_entry = {
                         'S_No': i + 1,
-                        'ACE_Case_ID': given_data['ACE Case ID'][i],
-                        'Party_ID': given_data['Party ID'][i],
-                        'Party_Name': given_data['Party name'][i],
+                        'ACE_Case_ID': given_data[ace_case_id_cr][i],
+                        'Party_ID': given_data[party_id_cr][i],
+                        'Party_Name': given_data[party_name_cr][i],
                         'Stock': given_data['Stock'][i],
                         'Stock_margin': given_data['Stock margin'][i],
                         'Raw_materials': given_data['Raw materials'][i],
@@ -1944,10 +1971,10 @@ def consolidated_report():
                         'WCL_sanctioned_in_Limit_module': given_data['WCL sanctioned in Limit module'][i],
                         'Unsecured_utilisations': given_data['Unsecured utilizations'][i],
                         'Total_utiliisations': given_data['Total utilizations'][i],
-                        'Drawing_power_Amount': given_data['Drawing power Amount'][i],
+                        'Drawing_power_Amount': given_data[drawing_power_amount_cr][i],
                         'Remarks': given_data['Remarks'][i],
                         
-                        'User_name': given_data['User name'][i]
+                        'User_name': given_data[][i]
                     }
                     final_data['row_data'].append(row_entry)
             if 'rejected' in reports_name.lower():
@@ -1970,13 +1997,13 @@ def consolidated_report():
                 res = res.drop(columns=['REJECTED_COMMENTS'])
 
                 # Iterating through each entry in the given data dictionary
-                for i in range(len(given_data['ACE Case ID'])):
+                for i in range(len(given_data[ace_case_id_cr])):
                     
                     row_entry = {
                         'S_No': i + 1,
-                        'ACE_Case_ID': given_data['ACE Case ID'][i],
-                        'Party_ID': given_data['Party ID'][i],
-                        'Party_Name': given_data['Party name'][i],
+                        'ACE_Case_ID': given_data[ace_case_id_cr][i],
+                        'Party_ID': given_data[party_id_cr][i],
+                        'Party_Name': given_data[party_name_cr][i],
                         'Reject_reason': given_data['Reject reason'][i],
                         'Rejected_Comments': given_data['Rejected Comments'][i],
                         'Stock': given_data['Stock'][i],
@@ -2011,10 +2038,10 @@ def consolidated_report():
                         'WCL_sanctioned_in_Limit_module': given_data['WCL sanctioned in Limit module'][i],
                         'Unsecured_utilisations': given_data['Unsecured utilizations'][i],
                         'Total_utiliisations': given_data['Total utilizations'][i],
-                        'Drawing_power_Amount': given_data['Drawing power Amount'][i],
+                        'Drawing_power_Amount': given_data[drawing_power_amount_cr][i],
                         'Remarks': given_data['Remarks'][i],
                         
-                        'User_name': given_data['User name'][i]
+                        'User_name': given_data[user_name_cr][i]
                     }
                     final_data['row_data'].append(row_entry)
             
@@ -2043,21 +2070,22 @@ def consolidated_report():
                 logging.debug(f"response of res{res}")
                 given_data = res.to_dict()
                 final_data = {'row_data': []}
-                res = res.drop(columns=['COMMENTS','Hold Comments'])
+                hold_comments_cr='Hold Comments'
+                res = res.drop(columns=['COMMENTS',hold_comments_cr])
 
 
                 SUCCESS_MESSAGE_CR='Successfully generated the report'
 
                 # Iterating through each entry in the given data dictionary
-                for i in range(len(given_data['ACE Case ID'])):
+                for i in range(len(given_data[ace_case_id_cr])):
                     row_entry = {
                         
                         'S_No': i + 1,
-                        'ACE_Case_ID': given_data['ACE Case ID'][i],
-                        'Party_ID': given_data['Party ID'][i],
-                        'Party_Name': given_data['Party name'][i],
+                        'ACE_Case_ID': given_data[ace_case_id_cr][i],
+                        'Party_ID': given_data[party_id_cr][i],
+                        'Party_Name': given_data[party_name_cr][i],
                         'Hold_reason': given_data['Hold reason'][i],
-                        'Hold_Comments': given_data['Hold Comments'][i],
+                        'Hold_Comments': given_data[hold_comments_cr][i],
                         'Stock': given_data['Stock'][i],
                         'Stock_margin': given_data['Stock margin'][i],
                         'Raw_materials': given_data['Raw materials'][i],
@@ -2090,14 +2118,14 @@ def consolidated_report():
                         'WCL_sanctioned_in_Limit_module': given_data['WCL sanctioned in Limit module'][i],
                         'Unsecured_utilisations': given_data['Unsecured utilizations'][i],
                         'Total_utiliisations': given_data['Total utilizations'][i],
-                        'Drawing_power_Amount': given_data['Drawing power Amount'][i],
+                        'Drawing_power_Amount': given_data[drawing_power_amount_cr][i],
                         'Remarks': given_data['Remarks'][i],
                         
-                        'User_name': given_data['User name'][i]
+                        'User_name': given_data[user_name_cr][i]
                     }
                     final_data['row_data'].append(row_entry)
                     res.rename(columns={
-                    'comments': 'Hold Comments',
+                    'comments':hold_comments_cr,
                 }, inplace=True)
                 
                 
@@ -2258,11 +2286,14 @@ def process_report_agri():
                 df=extraction_db.execute_(query)
                 logging.info(f"dfresult {df}")
                 logging.info(f"dfresult {df.columns}")
-
+                case_id_pra='ACE Case ID'
+                party_id_pra='Party ID'
+                party_name_pra='Party name'
+                user_name_pra='User name'
                 df.rename(columns={
-                    'CASE_ID': 'ACE Case ID',
-                    'PARTY_ID': 'Party ID',
-                    'PARTY_NAME': 'Party name'
+                    'CASE_ID': case_id_pra,
+                    'PARTY_ID':  party_id_pra,
+                    'PARTY_NAME': party_name_pra
                     
                     
                 }, inplace=True)
@@ -2316,8 +2347,9 @@ def process_report_agri():
                     except Exception as e:
                         logging.info(f"####exception for margins###{e}")
                 final_result = pd.DataFrame([final_result])
+                drawing_power_amount_pra='Drawing power Amount'
                 renamed_columns = {
-                    'Drawing Power': 'Drawing power Amount',
+                    'Drawing Power': drawing_power_amount_pra,
                     'Raw Materials': 'Raw materials',
                     'Total Creditors': 'Creditors',
                     'Work in Process': 'Work in progress',
@@ -2339,7 +2371,7 @@ def process_report_agri():
 
                 
                 res = res.append(final_df, ignore_index=True)
-            columns_to_drop = ['User name','customer_name','CUSTOMER_NAME',
+            columns_to_drop = [user_name_pra,'customer_name','CUSTOMER_NAME',
 
             "Total Stock", "Obsolete Stock", "Pledge Stock", "Consumable & Spares",
             "Goods in Transit", "PCFC Stock", "Inventory Financed Stock", "Domestic Stock",
@@ -2393,12 +2425,12 @@ def process_report_agri():
             # Iterating through each entry in the given data dictionary
             logging.info(f"#given data{given_data}")
             if given_data:
-                for i in range(len(given_data['ACE Case ID'])):
+                for i in range(len(given_data['case_id_pra'])):
                     row_entry = {
                     'S_No': i + 1,
-                    'case_id': given_data['ACE Case ID'][i],
-                    'Party_Id': given_data['Party ID'][i],
-                    'Party_Name': given_data['Party name'][i],
+                    'case_id': given_data[case_id_pra][i],
+                    'Party_Id': given_data[ party_id_pra][i],
+                    'Party_Name': given_data[party_name_pra][i],
                     'Rules_Accuracy': given_data['Rules Accuracy'][i],
                     'Signature_and_Rubber_stamp': given_data['Signature and Rubber stamp'][i],
                     'Stock_statement_month': given_data['Stock statement month'][i],
@@ -2437,7 +2469,7 @@ def process_report_agri():
                     'WCL_sanctioned_in_Limit_module': given_data['WCL sanctioned in Limit module'][i],
                     'Unsecured_utilisations': given_data['Unsecured utilisations'][i],
                     'Total_utiliisations': given_data['Total utiliisations'][i],
-                    'Drawing_power_Amount': given_data['Drawing power Amount'][i],
+                    'Drawing_power_Amount': given_data[drawing_power_amount_pra][i],
                     'Remarks': given_data['Remarks'][i],
                    
                 }
@@ -2501,3 +2533,12 @@ def process_report_agri():
     except Exception:
         logging.info("issue in the query formation")
     return jsonify(return_json_data)
+
+
+
+
+
+
+
+
+
