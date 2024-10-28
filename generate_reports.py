@@ -359,7 +359,7 @@ def generate_report_file(tenant_id, report_id, data, reference_id,file_name_var,
                 data = nested_df
             logging.debug("#############3data: ", data)
 
-            jinja2_env = Environment(autoescape=False)
+            jinja2_env = Environment()
             print("report_template for jinja:", report_template)
             jinja2_tpl = jinja2_env.from_string(report_template)
             print("report_template for jinja2_tpl: ", jinja2_tpl)
@@ -386,9 +386,8 @@ def generate_report_file(tenant_id, report_id, data, reference_id,file_name_var,
                     thin = Side(border_style="thin", color="000000")
                     border = Border(top=thin, left=thin, right=thin, bottom=thin)
                     al = Alignment(vertical="center",horizontal='center', wrap_text = True)
-
-                    for mer_Cel in ws.merged_cells.ranges:
-                        style_range(ws, str(mer_Cel), border=border, alignment=al)
+                    for merged_cell in ws.merged_cells.ranges:
+                        style_range(ws, str(merged_cell), border=border, alignment=al)
 
                     wb.save(file_path)
                 elif excel_flag == 1:
@@ -399,8 +398,8 @@ def generate_report_file(tenant_id, report_id, data, reference_id,file_name_var,
                         thin = Side(border_style="thin", color="000000")
                         border = Border(top=thin, left=thin, right=thin, bottom=thin)
                         al = Alignment(vertical="center",horizontal='center', wrap_text = True)
-                        for mer_Cel in ws.merged_cells.ranges:
-                            style_range(ws, str(mer_Cel), border=border, alignment=al)
+                        for merged_Cell in ws.merged_cells.ranges:
+                            style_range(ws, str(merged_Cell), border=border, alignment=al)
 
                         wb.save(file_path)
                     except Exception as e:
@@ -413,8 +412,8 @@ def generate_report_file(tenant_id, report_id, data, reference_id,file_name_var,
                     border = Border(top=thin, left=thin, right=thin, bottom=thin)
                     al = Alignment(vertical="center",horizontal='center', wrap_text = True)
 
-                    for mer_Cel in ws.merged_cells.ranges:
-                        style_range(ws, str(mer_Cel), border=border, alignment=al)
+                    for merged_Cell in ws.merged_cells.ranges:
+                        style_range(ws, str(merged_Cell), border=border, alignment=al)
 
                     wb.save(file_path)
 
@@ -475,7 +474,8 @@ def generate_report_file(tenant_id, report_id, data, reference_id,file_name_var,
                     sub_html = html_out[start_ind:till_last]
 
                 html = html + sub_html + '</table>'
-                html = re.sub('\n', '', html)
+                #html = re.sub('\n', '', html)
+                html = html.replace('\n', '')
                 query = "UPDATE REPORT_REQUESTS SET HTML_REPORT= %s WHERE REFERENCE_ID=%s "
                 db.execute_(query, params=[html,reference_id])
     except Exception as e:
@@ -588,6 +588,7 @@ def generate_report(ui_data):
         if report_to_excel_flag and report_data:
             try:
                 report_data=pd.DataFrame.from_dict(json_normalize(report_data), orient='columns')
+                #report_data = pd.json_normalize(report_data) if isinstance(report_data, list) else pd.DataFrame.from_dict(report_data, orient='columns')
             except Exception as e:
                 report_data=pd.DataFrame.from_dict(report_data, orient='columns')
                 
@@ -604,7 +605,7 @@ def generate_report(ui_data):
                 nested_df = json.dumps((compress(json_df)), ensure_ascii=False)
                 data = nested_df.replace("'", "\"")
                 print(f"#############3data:{data}")
-                jinja2_env = Environment(autoescape=False)
+                jinja2_env = Environment()
                 print(f"report_template for jinja: {report_template}")
                 jinja2_tpl = jinja2_env.from_string(report_template)
                 print(f"report_template for jinja2_tpl: {jinja2_tpl}")
@@ -644,7 +645,8 @@ def generate_report(ui_data):
                         sub_html = html_out[start_ind:till_last]
 
                     html = html + sub_html + '</table>'
-                    html = re.sub('\n', '', html)
+                    html = html.replace('\n', '')
+                    #html = re.sub('\n', '', html)
 
                 query = f"UPDATE report_requests SET html_report='{html}' WHERE reference_id='{reference_id}'"
                 reports_db.execute_(query)
