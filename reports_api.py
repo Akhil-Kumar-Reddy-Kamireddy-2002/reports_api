@@ -1571,7 +1571,7 @@ def audit_report():
                 output['Total Handling time'] = str(output['Total Handling time'])
             return_json_data = {}
             logging.info(f'{return_json_data}###return_json_data#########return_json_data')
-            return_json_data['message']='SUCCESS_MESSAGE_AR'
+            return_json_data['message']=SUCCESS_MESSAGE_AR
             return_json_data['excel_flag']= 1
             return_json_data['flag'] = True
             return_json_data['data'] = [{'row_data':outputs}]
@@ -2141,21 +2141,22 @@ def consolidated_report():
             try:
 
                 return_json_data = {}
-                SUCCESS_MESSAGE_CR=''
-                return_json_data['message']='SUCCESS_MESSAGE_CR'
+                SUCCESS_MESSAGE_CR='Successfully generated the report'
+                return_json_data['message']=SUCCESS_MESSAGE_CR
                 return_json_data['excel_flag']= 1
                 return_json_data['flag'] = True
                 return_json_data['data'] = final_data
                 
                 data['report_data'] = return_json_data
                 logging.info(f'{return_json_data}###############return_json_data')
-                FAILED_MESSAGE_CR='Failed!!'
+               
             except Exception as e:
+                FAILED_MESSAGE_CR='Failed!!'
                 logging.info(f"error at process_Report {e}")
                 logging.debug(f"{e} ####issue")
                 return_json_data = {}
                 return_json_data['flag'] = False
-                return_json_data['message'] = 'FAILED_MESSAGE_CR'
+                return_json_data['message'] = FAILED_MESSAGE_CR
 
         except Exception as e:
             logging.exception(f'Something went wrong exporting data : {e}')
@@ -2448,7 +2449,7 @@ def process_report_agri():
                 SUCCESS_MESSAGE_PRA='Successfully generated the report'
 
                 return_json_data = {}
-                return_json_data['message']='SUCCESS_MESSAGE_PRA'
+                return_json_data['message']=SUCCESS_MESSAGE_PRA
                 return_json_data['excel_flag']= 1
                 return_json_data['flag'] = True
                 return_json_data['data'] = final_data
@@ -2458,9 +2459,10 @@ def process_report_agri():
                 logging.info(f'{return_json_data}###############return_json_data')
                 return jsonify(return_json_data)
             
-                FAILED_MESSAGE_PRA='Failed!!'
+                
 
             except Exception as e:
+                FAILED_MESSAGE_PRA='Failed!!'
                 logging.info(f"error at process_Report {e}")
                 logging.debug(f"{e} ####issue")
                 return_json_data = {}
@@ -2499,12 +2501,3 @@ def process_report_agri():
     except Exception:
         logging.info("issue in the query formation")
     return jsonify(return_json_data)
-
-
-
-
-
-
-
-
-
