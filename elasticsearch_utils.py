@@ -6,6 +6,8 @@ from os import listdir, remove, system, getenv
 
 from ace_logger import Logging
 
+import logging
+
 logging = Logging()
 
 logging.getLogger("elasticsearch").disabled = True
@@ -49,8 +51,16 @@ def get_search_indexes(sources, temp_tenant_id=''):
 
     return indexes
 
+# def escape_special_character(query):
+#     return re.sub('(\+|\-|\=|&&|\|\||\>|\<|\!|\(|\)|\{|\}|\[|\]|\^|"|~|\*|\?|\:|\\\|\/)', '\\\\\\1', query)
+
 def escape_special_character(query):
-    return re.sub('(\+|\-|\=|&&|\|\||\>|\<|\!|\(|\)|\{|\}|\[|\]|\^|"|~|\*|\?|\:|\\\|\/)', '\\\\\\1', query)
+    # Mistake: Missing some necessary escape characters inside the pattern and improper grouping
+    return re.sub(r'([+-=&|><!(){}[]^"~*?:\\/])', r'\\\1', query)
+
+
+
+
 
 def get_range_query_equality(field, gte=None, lte=None):
     """
@@ -246,128 +256,264 @@ def get_value_query(field, value):
     return value_query
 
 
+
+
+
+
+
+
 def get_must_not_query(filters):
     filter_queries = []
-    for filter in filters:
-        if filter.get('range', False):
-            field = filter.get('field', None)
-            start = filter.get('gte', None)
-            end = filter.get('lte', None)
-
-            if (start or end) and field:
-                filter_queries.append(get_range_query_equality(field, start, end))
-            else:
-                logging.exception('un sufficient parameters provided, arguments provided - ',filter)
-        elif isinstance(filter.get('value', None), list):
-            field = filter.get('field', None)
-            value = filter.get('value', None)
-            if field and value:
-                new_values = []
-                for v in value:
-                    if type(v) == str:
-                        v = escape_special_character(v)
-                        new_values.append(v.lower())
-                    else:
-                        new_values.append(v)
-
-                filter_queries.append({"terms": {field: new_values}})
-            else:
-                logging.exception('un sufficient parameters provided, arguments provided - ',filter)
+    
+    # Helper function to handle range filters
+    def handle_range_filter(filter):
+        field = filter.get('field')
+        start = filter.get('gte')
+        end = filter.get('lte')
+        if (start or end) and field:
+            filter_queries.append(get_range_query_equality(field, start, end))
         else:
-            field = filter.get('field', None)
-            value = filter.get('value', None)
-            if field and value:
-                filter_queries.append(get_value_query(field, value))
-            else:
-                logging.exception('un sufficient parameters and arguments provided - ',filter)
-
-    filter_query = aggregate_query_must_not(filter_queries)
-
-    return filter_query
-
-
-def get_filter_query_old(filters):
-    filter_queries = []
-    for filter in filters:
-        if filter.get('range', False):
-            field = filter.get('field', None)
-            start = filter.get('gte', None)
-            end = filter.get('lte', None)
-
-            if (start or end) and field:
-                logging.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@START OR END DETECTED IN GET FILTER QUERY")
-                filter_queries.append(get_range_query_equality(field, start, end))
-            else:
-                logging.exception('un sufficient parameters provided and arguments provided - ',filter)
-        elif isinstance(filter.get('value', None), list):
-            field = filter.get('field', None)
-            value = filter.get('value', None)
-            if field and value:
-                new_values = []
-                for v in value:
-                    if type(v) == str:
-                        v = escape_special_character(v)
-                        new_values.append(v.lower())
-                    else:
-                        new_values.append(v)
-
-                filter_queries.append({"terms": {field: new_values}})
-            else:
-                logging.exception('un-sufficient parameters provided - ',filter)
+            logging.exception('Insufficient parameters provided for range query, arguments provided - %s', filter)
+    
+    # Helper function to handle list of values
+    def handle_list_value_filter(filter):
+        field = filter.get('field')
+        value = filter.get('value')
+        if field and value:
+            new_values = [escape_special_character(v).lower() if isinstance(v, str) else v for v in value]
+            filter_queries.append({"terms": {field: new_values}})
         else:
-            field = filter.get('field', None)
-            value = filter.get('value', None)
-            if field and value:
-                filter_queries.append(get_value_query(field, value))
-            else:
-                logging.exception('un-sufficient parameters provided, arguments provided -',filter)
+            logging.exception('Insufficient parameters provided for list query, arguments provided - %s', filter)
+    
+    # Helper function to handle value filters
+    def handle_value_filter(filter):
+        field = filter.get('field')
+        value = filter.get('value')
+        if field and value:
+            filter_queries.append(get_value_query(field, value))
+        else:
+            logging.exception('Insufficient parameters provided, arguments provided - %s', filter)
+    
+    # Main logic to process filters
+    for filter in filters:
+        if filter.get('range'):
+            handle_range_filter(filter)
+        elif isinstance(filter.get('value'), list):
+            handle_list_value_filter(filter)
+        else:
+            handle_value_filter(filter)
+    
+    return aggregate_query_must_not(filter_queries)
 
-    filter_query = aggregate_query_filter(filter_queries)
 
-    return filter_query
+
+
+
+
+
+
+
+
+
+
+
+
+# def get_must_not_query(filters):
+#     filter_queries = []
+#     for filter in filters:
+#         if filter.get('range', False):
+#             field = filter.get('field', None)
+#             start = filter.get('gte', None)
+#             end = filter.get('lte', None)
+
+#             if (start or end) and field:
+#                 filter_queries.append(get_range_query_equality(field, start, end))
+#             else:
+#                 logging.exception('un sufficient parameters provided, arguments provided - ',filter)
+#         elif isinstance(filter.get('value', None), list):
+#             field = filter.get('field', None)
+#             value = filter.get('value', None)
+#             if field and value:
+#                 new_values = []
+#                 for v in value:
+#                     if type(v) == str:
+#                         v = escape_special_character(v)
+#                         new_values.append(v.lower())
+#                     else:
+#                         new_values.append(v)
+
+#                 filter_queries.append({"terms": {field: new_values}})
+#             else:
+#                 logging.exception('un sufficient parameters provided, arguments provided - ',filter)
+#         else:
+#             field = filter.get('field', None)
+#             value = filter.get('value', None)
+#             if field and value:
+#                 filter_queries.append(get_value_query(field, value))
+#             else:
+#                 logging.exception('un sufficient parameters and arguments provided - ',filter)
+
+#     filter_query = aggregate_query_must_not(filter_queries)
+
+#     return filter_query
+
+
+
+
+#import logging
 
 def get_filter_query(filters):
     filter_queries = []
+
     for filter in filters:
+        # Handle range filters
         if filter.get('range', False):
             field = filter['range'].get('field', None)
             start = filter['range'].get('gte', None)
             end = filter['range'].get('lte', None)
 
-            if (start or end) and field:
+            if (start is not None or end is not None) and field:
                 logging.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@START OR END DETECTED IN GET FILTER QUERY")
                 filter_queries.append(get_range_query_equality(field, start, end))
             else:
-                logging.exception('un sufficient parameters provided and arguments provided - ',filter)
+                logging.exception('Insufficient parameters provided, arguments: %s', filter)
+
+        # Handle list value filters
         elif isinstance(filter.get('value', None), list):
             field = filter.get('field', None)
             value = filter.get('value', None)
+
             if field and value:
                 new_values = []
                 for v in value:
-                    if type(v) == str:
-                        v = escape_special_character(v)
-                        new_values.append(get_value_query(field,v.lower()))
+                    # Use isinstance() to check if v is a string
+                    if isinstance(v, str):
+                        v = escape_special_character(v)  # Escape special characters
+                        new_values.append(get_value_query(field, v.lower()))  # Convert to lower case
                     else:
-                        new_values.append(get_value_query(field,v))
+                        new_values.append(get_value_query(field, v))  # Add value as is
 
-                filter_queries.append({"bool": {"should":new_values}})
-                
-                
+                # Use a boolean "should" clause for OR-like behavior
+                filter_queries.append({"bool": {"should": new_values}})
 
             else:
-                logging.exception('un-sufficient parameters provided, arguments provided -',filter)
+                logging.exception('Insufficient parameters provided, arguments: %s', filter)
+
+        # Handle single value filters
         else:
             field = filter.get('field', None)
             value = filter.get('value', None)
+
             if field and value:
                 filter_queries.append(get_value_query(field, value))
             else:
-                logging.exception('un-sufficient arguments provided - ',filter)
+                logging.exception('Insufficient parameters provided, arguments: %s', filter)
 
     filter_query = aggregate_query_filter(filter_queries)
 
     return filter_query
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def get_filter_query_old(filters):
+#     filter_queries = []
+#     for filter in filters:
+#         if filter.get('range', False):
+#             field = filter.get('field', None)
+#             start = filter.get('gte', None)
+#             end = filter.get('lte', None)
+
+#             if (start or end) and field:
+#                 logging.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@START OR END DETECTED IN GET FILTER QUERY")
+#                 filter_queries.append(get_range_query_equality(field, start, end))
+#             else:
+#                 logging.exception('un sufficient parameters provided and arguments provided - ',filter)
+#         elif isinstance(filter.get('value', None), list):
+#             field = filter.get('field', None)
+#             value = filter.get('value', None)
+#             if field and value:
+#                 new_values = []
+#                 for v in value:
+#                     if type(v) == str:
+#                         v = escape_special_character(v)
+#                         new_values.append(v.lower())
+#                     else:
+#                         new_values.append(v)
+
+#                 filter_queries.append({"terms": {field: new_values}})
+#             else:
+#                 logging.exception('un-sufficient parameters provided - ',filter)
+#         else:
+#             field = filter.get('field', None)
+#             value = filter.get('value', None)
+#             if field and value:
+#                 filter_queries.append(get_value_query(field, value))
+#             else:
+#                 logging.exception('un-sufficient parameters provided, arguments provided -',filter)
+
+#     filter_query = aggregate_query_filter(filter_queries)
+
+#     return filter_query
+
+# def get_filter_query(filters):
+#     filter_queries = []
+#     for filter in filters:
+#         if filter.get('range', False):
+#             field = filter['range'].get('field', None)
+#             start = filter['range'].get('gte', None)
+#             end = filter['range'].get('lte', None)
+
+#             if (start or end) and field:
+#                 logging.info("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@START OR END DETECTED IN GET FILTER QUERY")
+#                 filter_queries.append(get_range_query_equality(field, start, end))
+#             else:
+#                 logging.exception('un sufficient parameters provided and arguments provided - ',filter)
+#         elif isinstance(filter.get('value', None), list):
+#             field = filter.get('field', None)
+#             value = filter.get('value', None)
+#             if field and value:
+#                 new_values = []
+#                 for v in value:
+#                     if type(v) == str:
+#                         v = escape_special_character(v)
+#                         new_values.append(get_value_query(field,v.lower()))
+#                     else:
+#                         new_values.append(get_value_query(field,v))
+
+#                 filter_queries.append({"bool": {"should":new_values}})
+                
+                
+
+#             else:
+#                 logging.exception('un-sufficient parameters provided, arguments provided -',filter)
+#         else:
+#             field = filter.get('field', None)
+#             value = filter.get('value', None)
+#             if field and value:
+#                 filter_queries.append(get_value_query(field, value))
+#             else:
+#                 logging.exception('un-sufficient arguments provided - ',filter)
+
+#     filter_query = aggregate_query_filter(filter_queries)
+
+#     return filter_query
+
+
+
+
+
 
 
 def get_main_query(text, columns, use_columns=False):
