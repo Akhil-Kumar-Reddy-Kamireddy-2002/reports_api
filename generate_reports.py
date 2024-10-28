@@ -398,8 +398,8 @@ def generate_report_file(tenant_id, report_id, data, reference_id,file_name_var,
                         thin = Side(border_style="thin", color="000000")
                         border = Border(top=thin, left=thin, right=thin, bottom=thin)
                         al = Alignment(vertical="center",horizontal='center', wrap_text = True)
-                        for merged_Cell in ws.merged_cells.ranges:
-                            style_range(ws, str(merged_Cell), border=border, alignment=al)
+                        for merged_cell in ws.merged_cells.ranges:
+                            style_range(ws, str(merged_cell), border=border, alignment=al)
 
                         wb.save(file_path)
                     except Exception as e:
@@ -412,8 +412,8 @@ def generate_report_file(tenant_id, report_id, data, reference_id,file_name_var,
                     border = Border(top=thin, left=thin, right=thin, bottom=thin)
                     al = Alignment(vertical="center",horizontal='center', wrap_text = True)
 
-                    for merged_Cell in ws.merged_cells.ranges:
-                        style_range(ws, str(merged_Cell), border=border, alignment=al)
+                    for merged_cell in ws.merged_cells.ranges:
+                        style_range(ws, str(merged_cell), border=border, alignment=al)
 
                     wb.save(file_path)
 
@@ -474,7 +474,6 @@ def generate_report_file(tenant_id, report_id, data, reference_id,file_name_var,
                     sub_html = html_out[start_ind:till_last]
 
                 html = html + sub_html + '</table>'
-                #html = re.sub('\n', '', html)
                 html = html.replace('\n', '')
                 query = "UPDATE REPORT_REQUESTS SET HTML_REPORT= %s WHERE REFERENCE_ID=%s "
                 db.execute_(query, params=[html,reference_id])
