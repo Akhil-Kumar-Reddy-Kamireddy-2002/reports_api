@@ -1974,7 +1974,7 @@ def consolidated_report():
                         'Drawing_power_Amount': given_data[drawing_power_amount_cr][i],
                         'Remarks': given_data['Remarks'][i],
                         
-                        'User_name': given_data[][i]
+                        'User_name': given_data['User name'][i]
                     }
                     final_data['row_data'].append(row_entry)
             if 'rejected' in reports_name.lower():
