@@ -17,7 +17,7 @@ from elasticsearch import Elasticsearch
 import ast
 try:
     from generate_reports import reports_consumer, generate_report
-except:
+except Exception as e:
     from app.generate_reports import reports_consumer, generate_report
 from time import time as tt
 from pandas import Timestamp
@@ -65,9 +65,7 @@ def measure_memory_usage():
 
 
 def http_transport(encoded_span):
-    # The collector expects a thrift-encoded list of spans. Instead of
-    # decoding and re-encoding the already thrift-encoded message, we can just
-    # add header bytes that specify that what follows is a list of length 1.
+
     body = encoded_span
     requests.post(
         'http://servicebridge:5002/zipkin',
@@ -83,7 +81,7 @@ def get_reports_column_mapping(columns):
             return_columns_map[column.replace('_', ' ').title()] = column
     return return_columns_map
 
-def insert_into_audit(case_id, data):
+def insert_into_audit(data):
     tenant_id = data.pop('tenant_id')
     db_config['tenant_id'] = tenant_id
     stats_db = DB('stats', **db_config)
@@ -314,7 +312,7 @@ def get_reports_column_data_types(columns, tenant_id):
         FETCH FIRST 1 ROW ONLY"""
     reports_columns = list(reports_db.execute_(column_query).columns.values)
 
-    # query = "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = 'report_requests'"
+
     query = """SELECT DATA_TYPE
         FROM USER_TAB_COLUMNS
         WHERE TABLE_NAME = 'REPORT_REQUESTS'"""
@@ -340,11 +338,7 @@ def get_reports_column_data_types(columns, tenant_id):
 def get_group_ids(user, db):
     logging.info(f'Getting group IDs for user `{user}`')
 
-    # query = 'SELECT organisation_attributes.attribute, user_organisation_mapping.value \
-    #         FROM `user_organisation_mapping`, `active_directory`, `organisation_attributes` \
-    #         WHERE active_directory.username=%s AND \
-    #         active_directory.id=user_organisation_mapping.user_id AND \
-    #         organisation_attributes.id=user_organisation_mapping.organisation_attribute'
+
     query="""SELECT organisation_attributes.attribute, user_organisation_mapping.value 
         FROM user_organisation_mapping 
         JOIN active_directory ON active_directory.id = user_organisation_mapping.user_id 
@@ -359,15 +353,14 @@ def get_group_ids(user, db):
 
     user_group_dict = dict(zip(user_group.attribute, user_group.value))
     user_group_dict = {key: [value] for key, value in user_group_dict.items()}
-    # group_def_df = db.get_all('GROUP_DEFINITION')
     query="select * from GROUP_DEFINITION"
     group_def_df = db.execute_(query)
 
     if group_def_df.empty:
-        logging.debug(f'Groups not defined in `group_definition`')
+        logging.debug('Groups not defined in `group_definition`')
 
         return
-    logging.info(f"####groupgroup_def_df {group_def_df}")
+    logging.info("####groupgroup_def_df {group_def_df}")
 
     user_group = group_def_df.to_dict()
     group_def = {}
@@ -387,11 +380,11 @@ def get_group_ids(user, db):
 
         try:
             group_dict = json.loads(group['group_definition'])
-        except:
+        except Exception:
             logging.error('Could not load group definition dict.')
             break
 
-        # Check if all key-value from group definition is there in the user group
+
         if group_dict.items() == user_group_dict.items():
             group_ids.append(index)
 
@@ -403,9 +396,9 @@ def get_reports_queue():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except:
-        logging.warning("Failed to start ram and time calc")
-        pass
+    except Exception:
+        logging.warning("##Failed to start ram and time calc")
+        
     data = request.json
 
     logging.info(f'Data recieved: {data}')
@@ -429,7 +422,7 @@ def get_reports_queue():
         try:
             
             user = data.get('user', None)
-            total_count = 0  # pagination variable
+            total_count = 0  
             filtered_text = data.get('filter_text','')
             try:
                 start_point = data.get('start', 1)
@@ -441,7 +434,7 @@ def get_reports_queue():
 
             try:
                 offset = end_point - start_point
-            except:
+            except Exception:
                 start_point = 1
                 end_point = 20
                 offset = 20
@@ -462,14 +455,7 @@ def get_reports_queue():
                                 'tenant_id': tenant_id
                             }
             reports_db = DB('reports', **reports_db_config)
-            group_access_db = DB('group_access', **reports_db_config)
 
-            # query = f"select `First_Name`,`Last_Name` from `active_directory` where username ='{user}'"
-
-            # query = f"SELECT first_name , last_name FROM ACTIVE_DIRECTORY where username = '{user}'"
-            # query = f"SELECT first_name , last_name FROM ACTIVE_DIRECTORY where username = '{user}'"
-            # query_data = group_access_db.execute_(query).to_dict(orient='records')[0]
-            # user__=query_data['first_name']+" "+query_data['last_name']
 
             user__=user
 
@@ -491,7 +477,7 @@ def get_reports_queue():
                 if end_point > total:
                     end_point = total
                 if start_point == 1:
-                    pass
+                    logging.info("start_point is 1")                
                 else:
                     start_point += 1
                 print(f'#########Files got are: {files}')
@@ -504,7 +490,7 @@ def get_reports_queue():
                         if key=='TAGS' or key=='tags':
                             try:
                                 i[key]=ast.literal_eval(value)
-                            except:
+                            except Exception:
                                 pass
                 end_point = len(files)
                 column_data_types = {"GENERATED_DATETIME":"unknown","REFERENCE_ID":"unknown","REPORT_NAME":"unknown","REQUESTED_BY":"unknown","REQUESTED_DATETIME":"unknown","STATUS":"unknown","TAGS":"unknown","generated_datetime":"string","reference_id":"number","report_name":"string","requested_by":"string","requested_datetime":"string","status":"date","tags":"string"}
@@ -518,7 +504,6 @@ def get_reports_queue():
                         dic[key]=value
                     res_dic = {**i,**dic}
                     final_data.append(res_dic)
-                #return jsonify({"flag": True, "data": files, "pagination":pagination})
                 respose_data = {
                 'flag': True,
                 'data': {
@@ -540,8 +525,7 @@ def get_reports_queue():
                 }
                 return jsonify(response_data)
 
-            # pagination_query = "SELECT reference_id,report_name,generated_datetime,requested_by,status,requested_datetime,tags FROM report_requests where requested_by=%s and parent_id is NULL ORDER BY requested_datetime desc LIMIT %s OFFSET %s"
-            pagination_query=f"""
+            pagination_query="""
             SELECT REFERENCE_ID, REPORT_NAME, GENERATED_DATETIME, REQUESTED_BY, STATUS, REQUESTED_DATETIME,TAGS
             FROM report_requests 
             WHERE requested_by = %s AND parent_id IS NULL 
@@ -560,7 +544,6 @@ def get_reports_queue():
                     user_reports_data.loc[idx, "requested_datetime"] = str(
                         user_reports_data.loc[idx, "requested_datetime"])
                     if value:
-                        user_reports_data.loc[idx, "generated_datetime"] = ""
                         user_reports_data.loc[idx, "generated_datetime"] = None
                     else:
                         user_reports_data.loc[idx, "generated_datetime"] = str(
@@ -576,22 +559,22 @@ def get_reports_queue():
                     try:
                         report_data['requested_by']=user__
                         report_data['generated_datetime'] = datetime.strptime(report_data['generated_datetime'], "%Y-%m-%d %H:%M:%S")
-                        report_data['generated_datetime']=report_data['generated_datetime'].strftime(f'%d-%b-%Y %H:%M:%S')
+                        report_data['generated_datetime']=report_data['generated_datetime'].strftime('%d-%b-%Y %H:%M:%S')
                         report_data['requested_datetime']=datetime.strptime(report_data['requested_datetime'], "%Y-%m-%d %H:%M:%S")
-                        report_data['requested_datetime']=report_data['requested_datetime'].strftime(f'%d-%b-%Y %H:%M:%S')
+                        report_data['requested_datetime']=report_data['requested_datetime'].strftime('%d-%b-%Y %H:%M:%S')
                     except Exception as e:
                         print(e)
-                        pass
+                        
                     print(f'report_data##{report_data}')
                     try:
                         report_data['TAGS']=json.loads(report_data['TAGS'])
-                    except:
+                    except Exception:
                         pass
                  
 
                     user_reports_data_json[i] = report_data
 
-            except:
+            except Exception:
                 message = 'Error fetching data from database'
                 logging.exception(message)
                 return jsonify({'flag': False, 'message': message})
@@ -603,7 +586,7 @@ def get_reports_queue():
             logging.debug(total_count)
 
 
-            # Get report types
+
             # Get group_id to know which reports are accessable
             group_db = DB("group_access", **reports_db_config)
             user_groups = get_group_ids(user, group_db)
@@ -629,17 +612,16 @@ def get_reports_queue():
 
             for i, report in enumerate(report_dict):
                 filters_query = f"select * from report_filter where report_id={report['report_id']}"
-                filter_list = reports_db.execute_(
-                    filters_query).to_dict('records')
+                filter_list = reports_db.execute_(filters_query).to_dict('records')
                 if len(filter_list) > 0:
                     for j, filter_data in enumerate(filter_list):
-                        if filter_data['filter_options'] is not "" or filter_data['filter_options'] is not None:
+                        if filter_data['filter_options'] != "" and filter_data['filter_options'] is not None:
                             string_list = filter_data["filter_options"].split("#$")
                             logging.info(
                                 f"########### FIlter : {filter_data}and Filter Options:{string_list}")
                             if len(string_list) > 0:
                                 for k, string_json in enumerate(string_list):
-                                    if string_json is not '' and string_json is not "":
+                                    if string_json != '' and string_json != "":
                                         string_list[k] = json.loads(string_json)
                             filter_list[j]["filter_options"] = string_list
                 report['filters'] = filter_list
@@ -662,16 +644,6 @@ def get_reports_queue():
 
             logging.debug(f"end : {end_point}")
 
-            # define columns to display
-
-            # column_mapping
-            # column_order
-            # column_data_types
-            # reports
-            # files
-            # pagination
-
-            ######################### Creating return Data ###############
             reports_columns = [col_name for col_name in user_reports_data.columns if col_name not in [
                 'rn', 'report_id', 'request_id']]
 
@@ -682,11 +654,6 @@ def get_reports_queue():
             reports_column_dt_types = get_reports_column_data_types(
                 reports_columns, tenant_id)
             print(user_reports_data_json)
-           
-            
-            
-            # user_reports_data_json['TAGS'] = json.loads(user_reports_data_json['TAGS'])
-
             respose_data = {
                 'flag': True,
                 'data': {
@@ -713,9 +680,9 @@ def get_reports_queue():
                     'get_report_view' : True
                 }
             }
-            #logging.info(f'Response data: {respose_data}')
+
             
-        except:
+        except Exception:
             logging.exception(
                 'Something went wrong while getting reports queue. Check trace.')
             response_data = {
@@ -726,26 +693,24 @@ def get_reports_queue():
                 (1024 * 1024 * 1024)
             end_time = tt()
             time_consumed = str(end_time-start_time)
-        except:
-            logging.warning("Failed to calc end of ram and time")
-            logging.exception("ram calc went wrong")
+        except Exception:
+            logging.warning("#Failed to calc end of ram and time")
+            logging.exception("#ram calc went wrong@@@")
             memory_consumed = None
             time_consumed = None
-            pass
+            
         logging.info(f"## Reports API get_reports_queue Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
 
         return jsonify(respose_data)
-
+    
 
 @app.route('/generate_reports', methods=['POST', 'GET'])
 def generate_reports():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except:
-        logging.warning("Failed to start ram and time calc")
-        pass
-
+    except Exception:
+        logging.warning("###Failed to start ram and time calc")
     # Get data from UI
     data = request.json
     logging.info(f"## Reports info request data -- {data}")
@@ -775,7 +740,7 @@ def generate_reports():
         try:
             filters["start_date"]=filters["start_date"]+' 00:00:00'
             filters["end_date"]=filters["end_date"]+' 23:59:59'
-        except:
+        except Exception:
             filters["start_date"]='00-00-00 00:00:00'
             filters["end_date"]='00-00-00 00:00:00'
 
@@ -797,11 +762,11 @@ def generate_reports():
         logging.info(f"debugging report_id from front_end : {report_id}")
 
         # Generate file name if not given
-        ist = pytz.timezone("Asia/Calcutta")
+        ist="Asia/Calcutta"         #ist = pytz.timezone("Asia/Calcutta")
+        ist = pytz.timezone(ist)
         timestamp = datetime.now(ist)
         timestamp_actual = timestamp
-        timestamp__=timestamp.strftime(f'%d-%b-%Y')
-        timestamp1 = timestamp.strftime(f'%d-%m-%Y %H:%M:%S')
+        timestamp1 = timestamp.strftime('%d-%m-%Y %H:%M:%S')
 
         timestamp = str(timestamp)[:-13]
         # Add file to database
@@ -824,7 +789,6 @@ def generate_reports():
         parent_ref_id = -1
         parent_req_id = -1
         parent_id = -1
-        #last_report_id = -1
         parent_query = f"SELECT report_id FROM report_master where parent_id = '{report_id}'"
         parent_id_val = report_master_db.execute_(parent_query)
         report_ids = list(parent_id_val['report_id'])
@@ -881,19 +845,15 @@ def generate_reports():
             average_query = f"SELECT AVG(process_time) AS ptime FROM report_requests WHERE report_id={report_id} AND report_name   ='{report_name}' AND status='Download' AND process_time IS NOT NULL"
             report_eta = report_master_db.execute_(average_query)
             eta = 0
-            if len(report_eta['ptime']) > 0:
-                if report_eta['ptime'][0] != None:
-                    eta = int(report_eta['ptime'][0])
-            # eta = sum(list_eta)/len(list_eta)
-            # sum_query = f"SELECT SUM(process_time) AS sum FROM report_requests WHERE status='Processing' AND requested_datetime<'{timestamp}'"
-            # report_eta = report_master_db.execute_(sum_query)
+            if len(report_eta['ptime']) > 0 and report_eta['ptime'][0] != None:
+                eta = int(report_eta['ptime'][0])
+           
             formatted_requested_time = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
             query = f"SELECT SUM(process_time) AS sum FROM report_requests WHERE status = 'Processing' AND requested_datetime < TO_DATE('{formatted_requested_time}', 'YYYY-MM-DD HH24:MI:SS')"
             report_eta = report_master_db.execute_(query)
             processing = 0
-            if len(report_eta['sum']) > 0:
-                if report_eta['sum'][0] != None:
-                    processing = int(report_eta['sum'][0])
+            if len(report_eta['sum']) > 0 and report_eta['sum'][0] != None:
+                processing = int(report_eta['sum'][0])
             eta += processing
             eta_datetime = dt.timedelta(seconds=int(eta))
             eta_datetime += timestamp_actual
@@ -901,7 +861,6 @@ def generate_reports():
             eta_datetime = str(eta_datetime)[:-13]
 
             filters_data = ""
-            route = ""
             exec_query = ""
             if len(base_query_list) > 0 and query_type == 'query':
                 exec_query = base_query_list[0]
@@ -924,78 +883,45 @@ def generate_reports():
                                 if filter_type.strip().lower() == "string":
                                     exec_query = exec_query.replace(
                                         "{"+column+"}", "'"+value+"'")
-                                    # exec_query=exec_query%(value)
+                                    
 
                                 elif filter_type.strip().lower() == "int" or filter_type.strip().lower() == "integer":
                                     exec_query = exec_query.replace(
                                         "{"+column+"}", value)
-                                    # exec_query=exec_query%(value)
+                                    
                                 elif filter_type.strip().lower() == "date_picker":
                                     logging.debug(f"BEFORE {exec_query}")
                                     exec_query = exec_query.replace(
                                         "{"+column+"}", "'"+value+"'")
                                     logging.debug(f"AFTER {exec_query}")
-                                    # exec_query=exec_query%(value)
                                 elif filter_type.strip().lower() == "date_range":
                                     if "{"+column+"_begin"+"}" in exec_query:
                                         exec_query = exec_query.replace(
                                             "{"+column+"_begin"+"}", "'"+value['begin']+"'")
-                                        # exec_query=exec_query%(value['begin'])
                                     elif "{"+column+"_start"+"}" in exec_query:
                                         exec_query = exec_query.replace(
                                             "{"+column+"_start"+"}", "'"+value['begin']+"'")
-                                        # exec_query=exec_query%(value['begin'])
                                     if "{"+column+"_end"+"}" in exec_query:
                                         exec_query = exec_query.replace(
                                             "{"+column+"_end"+"}", "'"+value['end']+"'")
-                                        # exec_query=exec_query%(value['end'])
-
                                 elif filter_type.strip().lower() == "float":
-                                    pass
+                                    logging.info("filter_type is float")
 
                             except Exception as e:
                                 logging.exception(e)
                                 return jsonify({'flag': False, 'message': f'Failed to get the filter data {column}'})
 
-                    # If there single quotes inside the select insert statement will fail, adding escape single quotes
-                    # if "'" in exec_query:
-                    #    exec_query= exec_query.replace("'","''")
             elif len(route_list) > 0 and query_type == 'route':
                 if len(filters) > 0:
                     filters_data = json.dumps(filters)
                 elif len(filters) == 0:
                     filters_data = json.dumps({})
-           
-
-
                 exec_query = route_list[0]
-
             report_id_idx = report_id_idx + 1
-
             reports_db = DB('reports', **reports_db_config)
             file_name = str(file_name).replace(' ', '_')
             file_name = str(file_name).replace(':', '_')
             logging.debug(f"################### File name after {file_name}")
-            
-            # insert_data = {
-            #     'reference_id': reference_id,
-            #     "report_name": report_name,
-            #     'requested_by': requested_by,
-            #     'report_output': file_name,
-            #     'status': 'Processing',
-            #     'requested_datetime': timestamp,
-            #     'actual_report_query': exec_query,
-            #     'report_id': str(report_id),
-            #     'query_type': query_type,
-            #     'tags': filters_data,
-            #     'query_params': filters_data,
-            #     'filters': text_filters,
-            #     'fund_name': fund_name_var,
-            #     'eta': eta_datetime,
-
-            #     # 'scheduled_datetime' : scheduled_datetime
-
-            # }
             formatted_requested_time = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
             formatted_eta_datetime = datetime.strptime(eta_datetime, '%Y-%m-%d %H:%M:%S')
             print(formatted_requested_time,type(formatted_requested_time),'###req')
@@ -1045,7 +971,7 @@ def generate_reports():
                     try:
                         report_master_db.execute_(query)
                         logging.info("sheet name updated in report template")
-                    except:
+                    except Exception:
                         logging.info(
                             "Sheet name is not updated in report template")
                     logging.info("before sheetname update")
@@ -1058,7 +984,6 @@ def generate_reports():
             # Additional data to producer for parent
             insert_data['parent_id'] = str(parent_id)
             insert_data['parent_req_id'] = str(parent_req_id)
-            # insert_data['last_report_id'] = last_report_id
             insert_data['parent_ref_id'] = str(parent_ref_id)
             insert_data['parent_start_time'] = str(parent_start_time)
             insert_data['fund_name'] = fund_name_var
@@ -1066,10 +991,7 @@ def generate_reports():
             logging.debug(insert_data)
             # Produce to reports consumer
             if report_id != parent_id:
-                logging.info(f"########################producing {insert_data}")
-                # produce('reports_consumer', {
-                #         'tenant_id': tenant_id, 'report_name': report_name, **insert_data})
-                
+                logging.info(f"########################producing {insert_data}")                               
                 result_message= reports_consumer({'tenant_id': tenant_id, 'report_name': report_name, **insert_data})
                 logging.info(f"########################result_message {result_message}")
             if parent_id != -1:
@@ -1080,12 +1002,12 @@ def generate_reports():
                 (1024 * 1024 * 1024)
             end_time = tt()
             time_consumed = str(end_time-start_time)
-        except:
+        except Exception:
             logging.warning("Failed to calc end of ram and time")
-            logging.exception("ram calc went wrong")
+            logging.exception("#ram calc went wrong")
             memory_consumed = None
             time_consumed = None
-            pass
+        
         logging.info(f"## Reports API generate_reports Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
         report_status_query = f"SELECT `status` FROM `report_requests` where reference_id like '%{reference_id}%'"
         report_status = reports_db.execute_(report_status_query).to_dict(orient="records")[0]['status']
@@ -1100,9 +1022,9 @@ def get_report_view():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except:
-        logging.warning("Failed to start ram and time calc")
-        pass
+    except Exception:
+        logging.warning("####Failed to start ram and time calc")
+        
     data = request.json
     
     tenant_id = data.get('tenant_id', '')
@@ -1137,7 +1059,7 @@ def get_report_view():
                 query1 = f"select * from `report_requests` WHERE parent_id = {request_id}"
                 html_out = db.execute_(query1)['html_report'].to_list()
             return_data = {'flag': True, 'data': html_out}
-        except Exception as e:
+        except Exception:
             logging.error(e)
             message = 'Report preview failed'
             return_data = {'flag': False, 'data': message}
@@ -1147,25 +1069,21 @@ def get_report_view():
                 (1024 * 1024 * 1024)
             end_time = tt()
             time_consumed = str(end_time-start_time)
-        except:
-            logging.warning("Failed to calc end of ram and time")
-            logging.exception("ram calc went wrong")
+        except Exception as e:
+            logging.warning("##Failed to calc end of ram and time")
+            logging.exception("###ram calc went wrong##")
             memory_consumed = None
             time_consumed = None
-            pass
         logging.info(f"## Reports API get_report_view Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
 
         return return_data
-
-
 @app.route('/download_report', methods=['POST', 'GET'])
 def download_report():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except:
-        logging.warning("Failed to start ram and time calc")
-        pass
+    except Exception:
+        logging.warning("#####Failed to start ram and time calc")
     # Get data from UI
     data = request.json
     logging.info(f'Recieved data: {data}')
@@ -1219,12 +1137,10 @@ def download_report():
             file='onhold'
 
         if 'Completed' in report_name or 'process report' in report_name or 'Onhold' in report_name or  'Rejected' in report_name :
-            # parsed_date = datetime.strptime(str(generated_datetime), "%d-%b-%Y %H:%M:%S")
             parsed_date = datetime.strptime(generated_datetime, "%a, %d %b %Y %H:%M:%S %Z")
             formatted_date = parsed_date.strftime("%m-%d-%Y_%H_%M")
             report_file_name=f'{file}_report--{formatted_date}.xlsx'
         if 'Process Report' in report_name:
-            # parsed_date = datetime.strptime(str(generated_datetime), "%d-%b-%Y %H:%M:%S")
             parsed_date = datetime.strptime(generated_datetime, "%a, %d %b %Y %H:%M:%S %Z")
             formatted_date = parsed_date.strftime("%m-%d-%Y_%H_%M")
             report_file_name=f'Process_Report--{formatted_date}.xlsx'
@@ -1233,15 +1149,11 @@ def download_report():
         report_path = Path(f'./reports/{report_file_name}')
         logging.info(f"@@@@@@@report_path: {report_path}")
 
-        # for file in os.listdir("./reports"):
-        #     if file.endswith(".docx"):
-        #         print(os.path.join("./reports", file))
-       
         if 'Completed' in str(report_file_name) or 'Process_Report' in str(report_file_name) or 'Onhold' in str(report_file_name) or  'Rejected' in str(report_file_name):
             try:
                 with open(report_path, 'rb') as f:
                     report_blob = base64.b64encode(f.read())
-            except:
+            except Exception:
                 timestamp_match = re.search(r'_(\d{2})_(\d{2})\.xlsx', str(report_file_name))
                 if timestamp_match:
                     hours, minutes = map(int, timestamp_match.groups())
@@ -1277,7 +1189,7 @@ def download_report():
         try:
             logging.debug('DOWNLOADING REPORT')
             return_data = {'flag': True, 'blob': report_blob.decode('utf-8'), 'filename': f'{report_file_name}'}
-        except:
+        except Exception:
             message = 'Something went wrong while downloading report.'
             logging.exception(message)
             return_data = {'flag': False, 'message': message}
@@ -1287,14 +1199,15 @@ def download_report():
                 (1024 * 1024 * 1024)
             end_time = tt()
             time_consumed = str(end_time-start_time)
-        except:
-            logging.warning("Failed to calc end of ram and time")
-            logging.exception("ram calc went wrong")
+        except Exception:
+            logging.warning("###Failed to calc end of ram and time")
+            logging.exception("####ram calc went wrong####")
             memory_consumed = None
             time_consumed = None
-            pass
-        logging.info(f"## Report API download_report Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
+        logging.info("## Report API download_report Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
 
+            
+        logging.info(f"## Report API download_report Time and Ram checkpoint, Time consumed: {time_consumed}, Ram Consumed: {memory_consumed}")
 
         return return_data
 
@@ -1302,15 +1215,14 @@ def download_report():
 
 
 def get_total_mandatory_fields(queues_db):
-    get_mad_filds=f"SELECT display_name,unique_name FROM `field_definition` WHERE mandatory=1"
+    get_mad_filds="SELECT display_name,unique_name FROM `field_definition` WHERE mandatory=1"
     mad_df=queues_db.execute_(get_mad_filds)
     mandatory_fields=mad_df['unique_name'].to_list()
     total_mandatory_fields=len(mandatory_fields)
-#     print(f"#### mad fields is {mandatory_fields} and its length is {len(mandatory_fields)}")
     return total_mandatory_fields,mandatory_fields
 
 def get_edited_fields(queues_db):
-    qry=f"SELECT `case_id`,`fields_changed` FROM `field_accuracy`"
+    qry="SELECT `case_id`,`fields_changed` FROM `field_accuracy`"
     field_accuracy_df=queues_db.execute_(qry) 
     return field_accuracy_df
 
@@ -1318,24 +1230,31 @@ def get_ocr_fields(extraction_db,mandatory_fields,start_date,end_date):
     mad_flds_str=','.join(mandatory_fields)
     logging.info(f"### mad_flds str is {mad_flds_str}")
     qry=f"select `case_id`,{mad_flds_str} from ocr where created_date between '{start_date}' and '{end_date}'"
-    # qry=f"select `case_id`,`entity`,`facility`,`date_of_application`,`purpose_of_application`,`applicant_customers_name`,`c_consignor_exporter_name`,`c_consignee_importer_name`,`c_consignor_exporter_address`,`c_consignee_importer_address`,`c_name_of_authorised_agent`,`beneficiary_name`,`applicant_customers_address_country`,`beneficiary_address`,`bl_reference_number`,`bl_shipper_name`,`bl_consignee_name`,`bl_consignee_importer_address`,`bl_shipper_country`,`bl_consignee_country`,`bl_notify_party_name`,`bl_notify_party_address`,`bl_place_of_receipt_location_country`,`bl_port_loading_location_country`,`bl_port_discharge_location_country`,`bl_place_of_delivery_location_country`,`bl_final_destination_location_country`,`email_of_aqad`,`product_type_f_v`,`ba_ba_draft_no`,`do_supplier_beneficiary_name`,`do_buyer_name`,`do_buyer_address`,`do_supplier_beneficiary_address`,`do_buyer_country`,`do_supplier_country`,`inv_supplier_beneficiary_name`,`inv_buyer_drawee_name`,`inv_invoice_amount_figure`,`inv_invoice_amount_currency` from ocr limit 7"
     ocr_df=extraction_db.execute_(qry)
     return ocr_df
 
 ### MERGE the dataframes to proceed furthur
 def merge_df(df1,df2):
-    merged_df = pd.merge(df1, df2, on='case_id', how='right')
+    merged_df = pd.merge(df1, df2, on='case_id', how='right',validate='one_to_many')
     return merged_df
+
+
+MANDATORY_FIELDS = 'Mandatory Fields'
+
+
+
 
 def generate_case_wise_accuracy(merged_df_dict,total_mandatory,mandatory_fields):
     case_accuracy={}
+    EXTRACTED_FIELDS = 'Extracted Fields'
+    EDITED_FIELDS = 'Edited Fields'
+    NOT_EXTRACTED_FIELDS = 'Not Extracted'
     for field_data in merged_df_dict:
         try:
             logging.info(f"#### field_data is {field_data['fields_changed']}")
             field_changed=field_data['fields_changed']
             case_id=field_data['case_id']
-    #         if math.isnan(field_changed):
-            if type(field_changed)==str:
+            if isinstance(field_changed, str):
                 fields_changed=json.dumps(field_changed)
                 field_changed=list(json.loads(json.loads(fields_changed)).keys())
                 filtered_fields_changed = [field for field in field_changed if field in mandatory_fields]
@@ -1344,17 +1263,15 @@ def generate_case_wise_accuracy(merged_df_dict,total_mandatory,mandatory_fields)
                 empty_vals = [value for value in field_data_unchanged.values() if condition(value)]
                 not_extracted_flds=len(empty_vals)
                 edited_flds=len(filtered_fields_changed)
-    #             print(f"### filtered_values are {empty_vals}")
                 extract_fields_cnt=total_mandatory-not_extracted_flds
-                case_accuracy[case_id]={'Mandatory Fields':total_mandatory,'Extracted Fields':extract_fields_cnt,'Edited Fields':edited_flds,'Not Extracted':not_extracted_flds}
+                case_accuracy[case_id]={MANDATORY_FIELDS:total_mandatory,EXTRACTED_FIELDS:extract_fields_cnt,EDITED_FIELDS:edited_flds,NOT_EXTRACTED_FIELDS:not_extracted_flds}
             else:
                 condition = lambda x: x is None
                 # Using a list comprehension
                 empty_vals = [value for value in field_data.values() if condition(value)]
                 not_extracted_flds=len(empty_vals)
-    #             print(f"### filtered_values are {empty_vals}")
                 extract_fields_cnt=total_mandatory-not_extracted_flds
-                case_accuracy[case_id]={'Mandatory Fields':total_mandatory,'Extracted Fields':extract_fields_cnt,'Edited Fields':0,'Not Extracted':not_extracted_flds}
+                case_accuracy[case_id]={MANDATORY_FIELDS:total_mandatory,EXTRACTED_FIELDS:extract_fields_cnt,EDITED_FIELDS:0,NOT_EXTRACTED_FIELDS:not_extracted_flds}
         except Exception as e:
             logging.info(f"### Exception occured {e}")
             continue
@@ -1363,18 +1280,22 @@ def generate_case_wise_accuracy(merged_df_dict,total_mandatory,mandatory_fields)
 
 #### Generate excel with the Final data
 def generate_excel(data,file_name):
+    EXTRACTED_FIELDS_G='Extracted Fields'
+    EDITED_FIELDS_G='Edited Fields'
+    NOT_EXTRACTED_FIELDS_G='Not Extracted'
+
+
     df = pd.DataFrame(data).T
     summary_data={}
-    mandatory_fields=df['Mandatory Fields'].to_list()
-    extracted_fields=df['Extracted Fields'].to_list()
-    edited_fields=df['Edited Fields'].to_list()
-    not_extracted_fields=df['Not Extracted'].to_list()
+    mandatory_fields=df[MANDATORY_FIELDS].to_list()
+    extracted_fields=df(EXTRACTED_FIELDS_G).to_list()
+    edited_fields=df[ EDITED_FIELDS_G].to_list()
+    not_extracted_fields=df[NOT_EXTRACTED_FIELDS_G].to_list()
     
-    summary_data['Mandatory Fields']=round(sum(mandatory_fields),1)
-    summary_data['Extracted Fields']=round(sum(extracted_fields),1)
-    summary_data['Edited Fields']=round(sum(edited_fields),1)
-    summary_data['Not Extracted']=round(sum(not_extracted_fields),1)
-    ## Formula to calculate Accuracy (correctly extracted fields / (total no.of fields- unavailable fields ))*100
+    summary_data[MANDATORY_FIELDS]=round(sum(mandatory_fields),1)
+    summary_data[EXTRACTED_FIELDS_G]=round(sum(extracted_fields),1)
+    summary_data[ EDITED_FIELDS_G]=round(sum(edited_fields),1)
+    summary_data[NOT_EXTRACTED_FIELDS_G]=round(sum(not_extracted_fields),1)
     accuracy = 100-(100*sum(edited_fields)/sum(mandatory_fields))
     summary_data['Accuracy']=accuracy
 
@@ -1407,7 +1328,7 @@ def generate_excel(data,file_name):
     except Exception as e:
         logging.error(f"### Error writing to Excel file: {e}")
     
-    return
+
 
    
 
@@ -1416,9 +1337,10 @@ def generate_accuracy_report():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except:
-        logging.warning("Failed to start ram and time calc")
-        pass
+        logging.info(f"memory_before is {memory_before} and start_time is {start_time}")
+    except Exception:
+        logging.warning("####Failed to start ram and time calc##")
+        
     data = request.json
 
     logging.info(f"##### Request data in GENERATE ACCURACY REPORT IS {data}")
@@ -1430,14 +1352,14 @@ def generate_accuracy_report():
     end_date=data['end_date']
 
     if start_date == end_date:
-        logging.info(f"start and end dates are same so end date incrementing for 1 day")
-        logging.info(f"end_date is {end_date} and type is {type(end_date)}")
+        logging.info("start and end dates are same so end date incrementing for 1 day")
+        logging.info("end_date is {end_date} and type is {type(end_date)}")
         end_date = datetime.strptime(end_date, "%Y-%m-%d")
         end_date = end_date + timedelta(days=1)
         end_date= end_date.strftime("%Y-%m-%d")
         logging.info(f"end date after increment is {end_date} and type is {type(end_date)}")
     else:
-        pass
+        logging.info("else block executed")
 
     attr = ZipkinAttrs(
         trace_id=generate_random_64bit_string(),
@@ -1463,9 +1385,7 @@ def generate_accuracy_report():
             
             total_mandatory,mandatory_fields=get_total_mandatory_fields(queues_db)
             field_accuracy_df=get_edited_fields(queues_db)
-            # print(f"### field_accuracy_df is {field_accuracy_df}")
             ocr_df=get_ocr_fields(extraction_db,mandatory_fields,start_date,end_date)
-            # print(f" ########## ocr df is {ocr_df}")
             merged_df=merge_df(field_accuracy_df,ocr_df)
             merged_df_dict=merged_df.to_dict(orient='records')
 
@@ -1488,9 +1408,9 @@ def audit_report():
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except:
-        logging.warning("Failed to start ram and time calc")
-        pass
+    except Exception:
+        logging.warning("###Failed to start ram and time calc###")
+        
     data = request.json  
     tenant_id = data['ui_data']['tenant_id']
     trace_id = generate_random_64bit_string()
@@ -1510,12 +1430,11 @@ def audit_report():
             span_name='folder_monitor',
             transport_handler=http_transport,
             sample_rate=0.5
-    ) as zipkin_context:
+    ):
         data = request.json
         logging.info(f"request data: {data}")
 
         try:
-            #date_filters = data.get('filters',{})
             start_date = data['start_date']
             end_date = data['end_date']
             user=data['ui_data']['REQUESTED_BY']
@@ -1543,7 +1462,7 @@ def audit_report():
             logging.info(f"case_ids{case_ids}")
 
             outputs = []
-            #serial_number = 1
+        
             for serial_number, case_id in enumerate(case_ids, start=1):
                 audit_query = f"SELECT case_id, updated_date, ingested_queue, api_service FROM audit_ WHERE case_id LIKE '%{case_id}%'  AND api_service IN ('create_case_id', 'update_queue')"
                 audit_case_data = stats_db.execute_(audit_query)
@@ -1552,7 +1471,6 @@ def audit_report():
                 
                 grouped = audit_case_data.groupby('ingested_queue')
                 
-                none_group = audit_case_data[audit_case_data['ingested_queue'].isna()]
             
                 query_file_recieved = f"SELECT CREATED_DATE from PROCESS_QUEUE where case_id like '%{case_id}%'"
                 df_file_recieved = queue_db.execute_(query_file_recieved)
@@ -1564,7 +1482,7 @@ def audit_report():
                     party_id=df_party['party_id'][0]
                     party_name = df_party['party_name'][0]
                     moved_by = df_party['MOVED_BY'][0]
-                except:
+                except Exception:
                     party_id=None
                     party_name = None
                     moved_by = None
@@ -1579,27 +1497,27 @@ def audit_report():
                 # Calculate relevant timestamps and time differences
                 try:
                     file_received_time = desired_updated_date
-                except :
+                except Exception:
                     pass
                 try:
                     maker_ingestion_time = grouped.get_group('maker_queue')['updated_date'].min()
-                except:
+                except Exception:
                     pass
             
                 try:
                     completed_ingested_time = grouped.get_group('accepted_queue')['updated_date'].min()
-                except:
+                except Exception:
                     
                     completed_ingested_time = '0000-00-00 00:00:00'
-                    pass
+                    
             
 
                 try:
                     rejected_ingested_time = grouped.get_group('rejected_queue')['updated_date'].min()
-                except:
+                except Exception:
                     
                     rejected_ingested_time = '0000-00-00 00:00:00'
-                    pass
+                    
             
                 
 
@@ -1607,16 +1525,27 @@ def audit_report():
                     try:
                         
                         Total_handling_time= completed_ingested_time - maker_ingestion_time
-                    except:
+                    except Exception:
                         Total_handling_time = '0000-00-00 00:00:00'
                 else:
                     try:
                         
                         Total_handling_time=rejected_ingested_time - maker_ingestion_time
-                    except:
+                    except Exception:
                         Total_handling_time = '0000-00-00 00:00:00'
+
+
+               
+                MAKER_QUEUE_TIME_STAMP = 'Maker queue in Time Stamp'
+                COMPLETED_QUEUE_TIME_STAMP = 'Completed queue in time Stamp'
+                REJECTED_QUEUE_TIME_STAMP = 'Rejected queue in time Stamp'
+                TOTAL_HANDLING_TIME = 'Total Handling time'
+
+                CASE_CREATION_TIME_STAMP = 'Case creation time stamp'
         
                 output = {
+
+                       
                         'serial_number': serial_number,
                     
                         'case_id': case_id,
@@ -1626,12 +1555,12 @@ def audit_report():
                         'CLIMS Create API Request time':'NA',
                         'CLIMS Create API Response Time':'NA',
                         
-                        'Case creation time stamp': file_received_time,
+                        CASE_CREATION_TIME_STAMP: file_received_time,
             
-                        'Maker queue in Time Stamp': maker_ingestion_time,
-                        'Completed queue in time Stamp':completed_ingested_time,
-                        'Rejected queue in time Stamp':rejected_ingested_time,
-                        'Total Handling time':Total_handling_time,
+                        MAKER_QUEUE_TIME_STAMP: maker_ingestion_time,
+                        COMPLETED_QUEUE_TIME_STAMP:completed_ingested_time,
+                        REJECTED_QUEUE_TIME_STAMP:rejected_ingested_time,
+                        TOTAL_HANDLING_TIME:Total_handling_time,
                         'Maker Name':moved_by,
                         'User ID':user
 
@@ -1644,29 +1573,36 @@ def audit_report():
                 logging.info(f"output{output}")
             
             logging.info(f"outputs##{outputs}")
+
+            
+
             for output in outputs:
-                output['Case creation time stamp'] = str(output['Case creation time stamp'])
-                output['Maker queue in Time Stamp'] = str(output['Maker queue in Time Stamp'])
-                output['Completed queue in time Stamp'] = str(output['Completed queue in time Stamp'])
-                output['Rejected queue in time Stamp'] = str(output['Rejected queue in time Stamp'])
-                output['Total Handling time'] = str(output['Total Handling time'])
+                output[ CASE_CREATION_TIME_STAMP] = str(output[ CASE_CREATION_TIME_STAMP])
+                output[ MAKER_QUEUE_TIME_STAMP] = str(output[ MAKER_QUEUE_TIME_STAMP])
+                output[COMPLETED_QUEUE_TIME_STAMP] = str(output[COMPLETED_QUEUE_TIME_STAMP])
+                output[REJECTED_QUEUE_TIME_STAMP] = str(output[REJECTED_QUEUE_TIME_STAMP])
+                output[TOTAL_HANDLING_TIME] = str(output[TOTAL_HANDLING_TIME])
             return_json_data = {}
             logging.info(f'{return_json_data}###return_json_data#########return_json_data')
-            return_json_data['message']='Successfully generated the report'
+            SUCCESS_MESSAGE_AR = 'Successfully generated the report'
+            return_json_data['message']=SUCCESS_MESSAGE_AR
             return_json_data['excel_flag']= 1
             return_json_data['flag'] = True
             return_json_data['data'] = [{'row_data':outputs}]
             data['report_data'] = return_json_data
 
-            #generate_report({'tenant_id': tenant_id, **data})
             logging.info(f'{return_json_data}###############return_json_data')
+
+
+           
             
         except Exception as e:
+            FAILED_MESSAGE_AR = 'Failed!!'
             logging.info(f"error at audit_Report {e}")
             logging.debug(f"{e} ####issue")
             return_json_data = {}
             return_json_data['flag'] = False
-            return_json_data['message'] = 'Failed!!'
+            return_json_data['message'] = FAILED_MESSAGE_AR
             return jsonify(return_json_data)
     try:
         memory_after = measure_memory_usage()
@@ -1676,25 +1612,27 @@ def audit_report():
         memory_consumed = f"{memory_consumed:.10f}"
         logging.info(f"checkpoint memory_after - {memory_after},memory_consumed - {memory_consumed}, end_time - {end_time}")
         time_consumed = str(round(end_time-start_time,3))
-    except:
-        logging.warning("Failed to calc end of ram and time")
+    except Exception:
+        logging.warning("####Failed to calc end of ram and time")
         logging.exception("ram calc went wrong")
         memory_consumed = None
         time_consumed = None
-        pass
+        
 
     # insert audit
+   
     try:
+        NEW_FILE_RECEIVED_AR = "New file received"
         audit_data = {"tenant_id": tenant_id, "user_": "", "case_id": "",
                         "api_service": "folder_monitor", "service_container": "reportsapi",
-                        "changed_data": "New file received","tables_involved": "","memory_usage_gb": str(memory_consumed), 
+                        "changed_data": NEW_FILE_RECEIVED_AR,"tables_involved": "","memory_usage_gb": str(memory_consumed), 
                         "time_consumed_secs": time_consumed, "request_payload": json.dumps(data), 
                         "response_data": json.dumps(return_json_data), "trace_id": trace_id,
                         "session_id": "","status":json.dumps(return_json_data['flag'])}
   
         insert_into_audit(audit_data)
-    except:
-        logging.info(f"issue in the query formation")
+    except Exception:
+        logging.info("#issue in the query formation#")
     return jsonify(return_json_data)
 
 
@@ -1720,14 +1658,13 @@ def create_dataframe_from_json(json_data_list):
                         try:
                             data_dict = json.loads(value)
                             for nested_key, nested_value in data_dict.items():
-                                # nested_key_cleaned = re.sub(r'\W', '_', nested_key)  # Replace non-alphanumeric characters with underscore
                                 column_name = f"{nested_key}"
                                 if column_name not in columns_data:
                                     columns_data[column_name] = []
                                 numeric_value = extract_numeric_value(replace_empty_with_none(nested_value))
                                 columns_data[column_name].append(numeric_value)
                         except json.JSONDecodeError as json_error:
-                            print(f"Error decoding JSON at index {idx}: {json_error}")
+                            logging.info(f"Error decoding JSON at index {idx}: {json_error}")
                             # Handle the error if needed
                     else:
                         # Handle the case where value is None
@@ -1771,7 +1708,6 @@ def convert_to_custom_format(date_str):
             return dt.strftime("%d-%b-%y")
         except ValueError as e:
             logging.info(f"{e}###wrong format")
-            pass
 
     return None
 
@@ -1779,13 +1715,13 @@ def convert_to_custom_format(date_str):
 
 @app.route('/consolidated_report', methods=['POST', 'GET'])
 def consolidated_report():
-    logging.info(f'Calling Consolidated report')
+    logging.info('Calling Consolidated report')
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except:
-        logging.warning("Failed to start ram and time calc")
-        pass
+    except Exception:
+        logging.warning("#Failed to start ram and time calc#")
+        
     data = request.json
     tenant_id = data['ui_data']['tenant_id']
         
@@ -1807,35 +1743,46 @@ def consolidated_report():
             span_name='folder_monitor',
             transport_handler=http_transport,
             sample_rate=0.5
-    ) as zipkin_context:
+    ):
         data=request.json
         tenant_id = data['ui_data']['tenant_id']
         db_config['tenant_id'] = tenant_id
         logging.info(f"Request Data is: {data}")
-        queue_db = DB('queues', **db_config)
-        queue_id=data.get("queue_id",{})
-        case_id=data['ui_data']['REFERENCE_ID']
+
         reports_name=data['ui_data']['report_name']
         extraction_db = DB('extraction', **db_config)
-        group_db = DB("group_access", **db_config)
+
         queues_db = DB("queues", **db_config)
-        user=data['ui_data']['REQUESTED_BY']
+        CR="Asia/Calcutta"
+        start_date = data['start_date']
+        end_date = data['end_date']
+        ist = pytz.timezone(CR)
+        timestamp = datetime.now(ist)
+
+        reports_name=data['ui_data']['report_name']
+        extraction_db = DB('extraction', **db_config)
+        
+        queues_db = DB("queues", **db_config)
+        
 
         start_date = data['start_date']
         end_date = data['end_date']
-        zonee = data.get('zone', '')
-        ist = pytz.timezone("Asia/Calcutta")
+        
+        ist = pytz.timezone(CR)
         timestamp = datetime.now(ist)
-        timestamp_actual = timestamp
-        timestamp1 = timestamp.strftime(f'%d-%m-%Y %H:%M:%S')
+
+        timestamp1 = timestamp.strftime('%d-%m-%Y %H:%M:%S')
 
         timestamp = str(timestamp)[:-13]
 
         res= {}
-        logging.info(f"reports_name{reports_name}")
+        logging.info("reports_name{reports_name}")
         try:
             def final_result_fun(case_ids,res_columns,queue,case_id_db_data):
+                
                 print(f'########case_id_db_data is : {case_id_db_data}')
+                
+
                 if len(case_id_db_data):
                     if len(case_id_db_data)==1:
                         case_id_tuple = case_id_db_data['case_id'][0]
@@ -1865,19 +1812,22 @@ def consolidated_report():
                             """
                 df=extraction_db.execute_(query)
                 logging.info(f"query df is {df}")
+                CASE_ID_FRF='ACE Case ID'
+                PARTY_ID_FRF ='Party ID'
+                PARTY_NAME_FRF ='Party name'
+                USER_NAME_FRF ='User name'
+                DRAWING_POWER_AMOUNT_FRF ='Drawing power Amount'
+                HOLD_COMMENTS_FRF ='Hold Comments'
                 df.rename(columns={
-                    'case_id': 'ACE Case ID',
-                    'party_id': 'Party ID',
-                    'party_name': 'Party name',
-                    'customer_name': 'User name',
-                    'drawing_power': 'Drawing power Amount',
-                    'hold_comments':'Hold Comments',
+                    'case_id': CASE_ID_FRF,
+                    'party_id': PARTY_ID_FRF  ,
+                    'party_name':  PARTY_NAME_FRF,
+                    'customer_name':USER_NAME_FRF,
+                    'drawing_power':DRAWING_POWER_AMOUNT_FRF,
+                    'hold_comments':HOLD_COMMENTS_FRF,
                     'rejected_comments':'Rejected Comments'
                 }, inplace=True)
                 res=[]
-
-
-
                 for each_case in case_ids:
                     case = each_case['case_id']
                     logging.info(f'{case}#####')
@@ -1896,19 +1846,29 @@ def consolidated_report():
                         try:
                             for i in values:
                                 final_result[i]=values[i][0]
-                        except:
-                            logging.info(f"exception in appending final_result")
+                        except Exception:
+                            logging.info("exception in appending final_result")
                         if not Party.empty:
                             query = f"SELECT COMPONENT_NAME, MARGIN from AGE_MARGIN_WORKING_UAT where PARTY_ID = '{Party['party_id'][0]}'"
                             margins = extraction_db.execute_(query)
                             try:
-                                rm_margin = margins.loc[margins['component_name'] == 'RAW MATERIALS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'RAW MATERIALS INSURED', 'margin'].empty else None
-                                wip_margin = margins.loc[margins['component_name'] == 'WORK IN PROGRESS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'WORK IN PROGRESS INSURED', 'margin'].empty else None
-                                fg_margin = margins.loc[margins['component_name'] == 'FINISHED GOODS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'FINISHED GOODS INSURED', 'margin'].empty else None
-                                stores_and_spares_margin = margins.loc[margins['component_name'] == 'STOCK & STORES INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'STOCK & STORES INSURED', 'margin'].empty else None
-                                book_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS', 'margin'].empty else None
-                                upto_90_days_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 90 DAYS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 90 DAYS', 'margin'].empty else None
-                                upto_120_days_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 120 DAYS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 120 DAYS', 'margin'].empty else None
+                                RAW_MATERIALS_INSURED_FRF ='RAW MATERIALS INSURED'
+                                WORK_IN_PROGRESS_INSURED_FRF='WORK IN PROGRESS INSURED'
+                                FINISHED_GOODS_INSURED_FRF='FINISHED GOODS INSURED'
+                                STOCK_STORES_INSURED_FRF='STOCK & STORES INSURED'
+                                BOOK_DEBTS_FRF='BOOK DEBTS'
+                                BOOK_DEBTS_UPTO_90_DAYS_FRF='BOOK DEBTS UPTO 90 DAYS'
+                                BOOK_DEBTS_UPTO_120_DAYS_FRF='BOOK DEBTS UPTO 120 DAYS'
+
+
+
+                                rm_margin = margins.loc[margins['component_name'] == RAW_MATERIALS_INSURED_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == RAW_MATERIALS_INSURED_FRF, 'margin'].empty else None
+                                wip_margin = margins.loc[margins['component_name'] == WORK_IN_PROGRESS_INSURED_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == WORK_IN_PROGRESS_INSURED_FRF, 'margin'].empty else None
+                                fg_margin = margins.loc[margins['component_name'] == FINISHED_GOODS_INSURED_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == FINISHED_GOODS_INSURED_FRF, 'margin'].empty else None
+                                stores_and_spares_margin = margins.loc[margins['component_name'] == STOCK_STORES_INSURED_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == STOCK_STORES_INSURED_FRF, 'margin'].empty else None
+                                book_debts_margin = margins.loc[margins['component_name'] == BOOK_DEBTS_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == BOOK_DEBTS_FRF, 'margin'].empty else None
+                                upto_90_days_debts_margin = margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_90_DAYS_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_90_DAYS_FRF, 'margin'].empty else None
+                                upto_120_days_debts_margin = margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_120_DAYS_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_120_DAYS_FRF, 'margin'].empty else None
                                 creditors_margin = margins.loc[margins['component_name'] == 'CREDITORS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'CREDITORS', 'margin'].empty else None
 
                                 
@@ -1921,7 +1881,7 @@ def consolidated_report():
                                 final_result['Upto 120 days-Debts margin'] = upto_120_days_debts_margin
                                 final_result['Creditors margin'] = creditors_margin
                             except Exception as e:
-                                logging.info(f"####issue in margins {e}")
+                                logging.info("####issue in margins {e}")
 
                         res.append(final_result)
                         
@@ -1930,7 +1890,7 @@ def consolidated_report():
                         logging.info(f"Error at Printing  Json data {e}")
                 result_df = pd.DataFrame(res)
                 renamed_columns = {
-                    'Drawing Power': 'Drawing power Amount',
+                    'Drawing Power': DRAWING_POWER_AMOUNT_FRF,
                     'Raw Materials': 'Raw materials',
                     'Total Creditors': 'Creditors',
                     'Work in Process': 'Work in progress',
@@ -1942,11 +1902,8 @@ def consolidated_report():
                     renamed_columns['stores and spares'] = 'Stores and spares'
                 elif 'Stores  & Spares' in result_df.columns:
                     renamed_columns['Stores  & Spares'] = 'Stores and spares'
-
                 # Rename columns
-                result_df.rename(columns=renamed_columns, inplace=True)
-                
-                
+                result_df.rename(columns=renamed_columns, inplace=True)                
                 logging.info(f"#####result_df{result_df}")
                 logging.info(f"#####df{df}")
                 final_df = pd.concat([result_df, df], axis=1)
@@ -1957,16 +1914,10 @@ def consolidated_report():
                 res_columns.reset_index(drop=True, inplace=True)
                 final_df = final_df.loc[:,~final_df.columns.duplicated()]
                 res = res_columns.append(final_df, ignore_index=True)
-
                 logging.info(f"length of the res :{len(res)}")
                 res.insert(0, 'S.No', range(1, len(res) + 1))
-                #logging.info(f"res for rejected comments{res["REJECTED_COMMENTS"].tolist()}")
                 logging.info(f"#####res{res}")
-                return res
-
-                
-
-            
+                return res            
             if 'completed' in reports_name.lower():
                 file='completed'
                 
@@ -1982,7 +1933,7 @@ def consolidated_report():
 
                 
 
-                columns = [ "ACE Case ID", "Party ID", "Party name", "User name", "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
+                columns = [ "ACE Case ID", "Party ID", "Party name", User_nameCR, "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
                 queue = 'accepted_queue'
                 res_columns = pd.DataFrame(columns=columns)
                 res=final_result_fun(case_ids,res_columns,queue ,case_id_db_data)
@@ -1990,12 +1941,17 @@ def consolidated_report():
                 final_data = {'row_data': []}
 
                 # Iterating through each entry in the given data dictionary
-                for i in range(len(given_data['ACE Case ID'])):
+                ace_case_id_cr='ACE Case ID'
+                party_id_cr='Party ID'
+                party_name_cr='Party name'
+                user_name_cr='User name'
+                drawing_power_amount_cr='Drawing power Amount'
+                for i in range(len(given_data[ace_case_id_cr])):
                     row_entry = {
                         'S_No': i + 1,
-                        'ACE_Case_ID': given_data['ACE Case ID'][i],
-                        'Party_ID': given_data['Party ID'][i],
-                        'Party_Name': given_data['Party name'][i],
+                        'ACE_Case_ID': given_data[ace_case_id_cr][i],
+                        'Party_ID': given_data[party_id_cr][i],
+                        'Party_Name': given_data[party_name_cr][i],
                         'Stock': given_data['Stock'][i],
                         'Stock_margin': given_data['Stock margin'][i],
                         'Raw_materials': given_data['Raw materials'][i],
@@ -2028,7 +1984,7 @@ def consolidated_report():
                         'WCL_sanctioned_in_Limit_module': given_data['WCL sanctioned in Limit module'][i],
                         'Unsecured_utilisations': given_data['Unsecured utilizations'][i],
                         'Total_utiliisations': given_data['Total utilizations'][i],
-                        'Drawing_power_Amount': given_data['Drawing power Amount'][i],
+                        'Drawing_power_Amount': given_data[drawing_power_amount_cr][i],
                         'Remarks': given_data['Remarks'][i],
                         
                         'User_name': given_data['User name'][i]
@@ -2042,10 +1998,10 @@ def consolidated_report():
                         WHERE QUEUE_LIST.QUEUE = 'rejected_queue' 
                         AND PROCESS_QUEUE.LAST_UPDATED >= TO_DATE('{start_date}', 'YYYY-MM-DD HH24:MI:SS') 
                         AND PROCESS_QUEUE.LAST_UPDATED <= TO_DATE('{end_date}', 'YYYY-MM-DD HH24:MI:SS')"""
-                
+                User_nameCR="User name"
                 case_ids = queues_db.execute_(query_case_ids).to_dict(orient="records")
                 case_id_db_data = queues_db.execute_(query_case_ids)
-                columns = [ "ACE Case ID", "Party ID", "Party name", "User name","Reject reason","Rejected Comments", "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
+                columns = [ "ACE Case ID", "Party ID", "Party name",User_nameCR,"Reject reason","Rejected Comments", "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
                 queue = 'rejected_queue'
                 res_columns = pd.DataFrame(columns=columns)
                 res=final_result_fun(case_ids,res_columns,queue,case_id_db_data)
@@ -2054,13 +2010,13 @@ def consolidated_report():
                 res = res.drop(columns=['REJECTED_COMMENTS'])
 
                 # Iterating through each entry in the given data dictionary
-                for i in range(len(given_data['ACE Case ID'])):
+                for i in range(len(given_data[ace_case_id_cr])):
                     
                     row_entry = {
                         'S_No': i + 1,
-                        'ACE_Case_ID': given_data['ACE Case ID'][i],
-                        'Party_ID': given_data['Party ID'][i],
-                        'Party_Name': given_data['Party name'][i],
+                        'ACE_Case_ID': given_data[ace_case_id_cr][i],
+                        'Party_ID': given_data[party_id_cr][i],
+                        'Party_Name': given_data[party_name_cr][i],
                         'Reject_reason': given_data['Reject reason'][i],
                         'Rejected_Comments': given_data['Rejected Comments'][i],
                         'Stock': given_data['Stock'][i],
@@ -2095,18 +2051,16 @@ def consolidated_report():
                         'WCL_sanctioned_in_Limit_module': given_data['WCL sanctioned in Limit module'][i],
                         'Unsecured_utilisations': given_data['Unsecured utilizations'][i],
                         'Total_utiliisations': given_data['Total utilizations'][i],
-                        'Drawing_power_Amount': given_data['Drawing power Amount'][i],
+                        'Drawing_power_Amount': given_data[drawing_power_amount_cr][i],
                         'Remarks': given_data['Remarks'][i],
                         
-                        'User_name': given_data['User name'][i]
+                        'User_name': given_data[user_name_cr][i]
                     }
                     final_data['row_data'].append(row_entry)
             
             if 'onhold' in reports_name.lower():
-                logging.info(f"entered hold report block")
+                logging.info("entered hold report block")
                 file='onhold'
-                # query_case_ids=f"""SELECT OCR.CASE_ID FROM hdfc_extraction.OCR INNER JOIN hdfc_queues.QUEUE_LIST ON OCR.CASE_ID = QUEUE_LIST.CASE_ID WHERE OCR.STATUS like 'hold' AND OCR.CREATED_DATE >= TO_DATE('{start_date}', 'YYYY-MM-DD HH24:MI:SS') AND OCR.CREATED_DATE <= TO_DATE('{end_date}', 'YYYY-MM-DD HH24:MI:SS')
-                # """
                 logging.info(f"#####start_date{start_date}")
                 logging.info(f"#####end_date{end_date}")
                 
@@ -2116,33 +2070,35 @@ def consolidated_report():
                         WHERE PROCESS_QUEUE.STATUS = 'Hold'
                         AND PROCESS_QUEUE.LAST_UPDATED >= TO_DATE('{start_date}', 'YYYY-MM-DD HH24:MI:SS') 
                         AND PROCESS_QUEUE.LAST_UPDATED <= TO_DATE('{end_date}', 'YYYY-MM-DD HH24:MI:SS')"""
-                
-                
              
                 logging.info(f"#####query_case_ids{query_case_ids}")
                 case_ids = queues_db.execute_(query_case_ids).to_dict(orient="records")
                 case_id_db_data = queues_db.execute_(query_case_ids)
                 logging.info(f"#####case_ids {case_ids}")
                 logging.info(f"#####case_id_db_data {case_id_db_data}")
-                columns = [ "ACE Case ID", "Party ID", "Party name", "User name", "Hold reason","Hold Comments","Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
+                columns = [ "ACE Case ID", "Party ID", "Party name", User_nameCR, "Hold reason","Hold Comments","Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
                 queue = 'Maker'
                 res_columns = pd.DataFrame(columns=columns)
                 res=final_result_fun(case_ids,res_columns,queue,case_id_db_data)
                 logging.debug(f"response of res{res}")
                 given_data = res.to_dict()
                 final_data = {'row_data': []}
-                res = res.drop(columns=['COMMENTS','Hold Comments'])
+                hold_comments_cr='Hold Comments'
+                res = res.drop(columns=['COMMENTS',hold_comments_cr])
+
+
+                
 
                 # Iterating through each entry in the given data dictionary
-                for i in range(len(given_data['ACE Case ID'])):
+                for i in range(len(given_data[ace_case_id_cr])):
                     row_entry = {
                         
                         'S_No': i + 1,
-                        'ACE_Case_ID': given_data['ACE Case ID'][i],
-                        'Party_ID': given_data['Party ID'][i],
-                        'Party_Name': given_data['Party name'][i],
+                        'ACE_Case_ID': given_data[ace_case_id_cr][i],
+                        'Party_ID': given_data[party_id_cr][i],
+                        'Party_Name': given_data[party_name_cr][i],
                         'Hold_reason': given_data['Hold reason'][i],
-                        'Hold_Comments': given_data['Hold Comments'][i],
+                        'Hold_Comments': given_data[hold_comments_cr][i],
                         'Stock': given_data['Stock'][i],
                         'Stock_margin': given_data['Stock margin'][i],
                         'Raw_materials': given_data['Raw materials'][i],
@@ -2175,14 +2131,14 @@ def consolidated_report():
                         'WCL_sanctioned_in_Limit_module': given_data['WCL sanctioned in Limit module'][i],
                         'Unsecured_utilisations': given_data['Unsecured utilizations'][i],
                         'Total_utiliisations': given_data['Total utilizations'][i],
-                        'Drawing_power_Amount': given_data['Drawing power Amount'][i],
+                        'Drawing_power_Amount': given_data[drawing_power_amount_cr][i],
                         'Remarks': given_data['Remarks'][i],
                         
-                        'User_name': given_data['User name'][i]
+                        'User_name': given_data[user_name_cr][i]
                     }
                     final_data['row_data'].append(row_entry)
                     res.rename(columns={
-                    'comments': 'Hold Comments',
+                    'comments':hold_comments_cr,
                 }, inplace=True)
                 
                 
@@ -2226,21 +2182,22 @@ def consolidated_report():
             try:
 
                 return_json_data = {}
-                return_json_data['message']='Successfully generated the report'
+                SUCCESS_MESSAGE_CR='Successfully generated the report'
+                return_json_data['message']=SUCCESS_MESSAGE_CR
                 return_json_data['excel_flag']= 1
                 return_json_data['flag'] = True
                 return_json_data['data'] = final_data
                 
                 data['report_data'] = return_json_data
                 logging.info(f'{return_json_data}###############return_json_data')
-                
+               
             except Exception as e:
+                FAILED_MESSAGE_CR='Failed!!'
                 logging.info(f"error at process_Report {e}")
                 logging.debug(f"{e} ####issue")
                 return_json_data = {}
                 return_json_data['flag'] = False
-                return_json_data['message'] = 'Failed!!'
-                #return jsonify(return_json_data)
+                return_json_data['message'] = FAILED_MESSAGE_CR
 
         except Exception as e:
             logging.exception(f'Something went wrong exporting data : {e}')
@@ -2253,38 +2210,40 @@ def consolidated_report():
         memory_consumed = f"{memory_consumed:.10f}"
         logging.info(f"checkpoint memory_after - {memory_after},memory_consumed - {memory_consumed}, end_time - {end_time}")
         time_consumed = str(round(end_time-start_time,3))
-    except:
-        logging.warning("Failed to calc end of ram and time")
-        logging.exception("ram calc went wrong")
+    except Exception:
+        logging.warning("#####Failed to calc end of ram and time")
+        logging.exception("#ram calc went wrong#")
         memory_consumed = None
         time_consumed = None
-        pass
+        
 
     # insert audit
+    
+
     try:
+        NEW_FILE_RECEIVED_CR = "New file received"
         audit_data = {"tenant_id": tenant_id, "user_": "", "case_id": "",
                         "api_service": "consolidated_report", "service_container": "reportsapi",
-                        "changed_data": "New file received","tables_involved": "","memory_usage_gb": str(memory_consumed), 
+                        "changed_data": NEW_FILE_RECEIVED_CR,"tables_involved": "","memory_usage_gb": str(memory_consumed), 
                         "time_consumed_secs": time_consumed, "request_payload": json.dumps(data), 
                         "response_data": json.dumps(return_json_data), "trace_id": trace_id,
                         "session_id": "","status":json.dumps(return_json_data['flag'])}
         
         insert_into_audit(audit_data)
-    except:
-        logging.info(f"issue in the query formation")
+    except Exception:
+        logging.info("##issue in the query formation##")
     return jsonify(return_json_data)
 
 
 
 @app.route('/process_report_agri', methods=['POST', 'GET'])
 def process_report_agri():
-    logging.info(f'Calling agri process report')
+    logging.info('Calling agri process report')
     try:
         memory_before = measure_memory_usage()
         start_time = tt()
-    except:
+    except Exception:
         logging.warning("Failed to start ram and time calc")
-        pass
         
     data = request.json
     trace_id = generate_random_64bit_string()
@@ -2305,29 +2264,25 @@ def process_report_agri():
             span_name='folder_monitor',
             transport_handler=http_transport,
             sample_rate=0.5
-    ) as zipkin_context:
+    ):
         data = request.json
         tenant_id = data['ui_data']['tenant_id']
         db_config['tenant_id'] = tenant_id
         logging.info(f"Request Data is: {data}")
-        queue_db = DB('queues', **db_config)
-        queue_id = data.get("queue_id", {})
-        case_id = data.get('REFERENCE_ID', None)
+
         extraction_db = DB('extraction', **db_config)
         queues_db = DB('queues', **db_config)
-        group_db = DB("group_access", **db_config)
-        user = data['ui_data']['REQUESTED_BY']
+        
         start_date = data['start_date']
         end_date = data['end_date']
-        # segment= data['segment']
-        ist = pytz.timezone("Asia/Calcutta")
+        PR= "Asia/Calcutta"
+        ist = pytz.timezone(PR)
         timestamp = datetime.now(ist)
-        timestamp_actual = timestamp
-        timestamp1 = timestamp.strftime(f'%d-%m-%Y %H:%M:%S')
+        
+        
 
         timestamp = str(timestamp)[:-13]
         try:
-            # query_case_ids=f"""SELECT OCR.CASE_ID FROM hdfc_extraction.OCR INNER JOIN hdfc_queues.QUEUE_LIST ON OCR.CASE_ID = QUEUE_LIST.CASE_ID WHERE (hdfc_queues.QUEUE_LIST.queue LIKE '%accepted_queue%' or hdfc_queues.QUEUE_LIST.queue LIKE '%maker%' )  AND OCR.CREATED_DATE >= TO_DATE('{start_date}', 'YYYY-MM-DD HH24:MI:SS') AND OCR.CREATED_DATE <= TO_DATE('{end_date}', 'YYYY-MM-DD HH24:MI:SS')"""
             query_case_ids  =f"""SELECT PROCESS_QUEUE.CASE_ID 
                     FROM hdfc_queues.PROCESS_QUEUE 
                     INNER JOIN HDFC_QUEUES.QUEUE_LIST ON PROCESS_QUEUE.CASE_ID = QUEUE_LIST.CASE_ID 
@@ -2346,11 +2301,14 @@ def process_report_agri():
                 df=extraction_db.execute_(query)
                 logging.info(f"dfresult {df}")
                 logging.info(f"dfresult {df.columns}")
-
+                case_id_pra='ACE Case ID'
+                party_id_pra='Party ID'
+                party_name_pra='Party name'
+                user_name_pra='User name'
                 df.rename(columns={
-                    'CASE_ID': 'ACE Case ID',
-                    'PARTY_ID': 'Party ID',
-                    'PARTY_NAME': 'Party name'
+                    'CASE_ID': case_id_pra,
+                    'PARTY_ID':  party_id_pra,
+                    'PARTY_NAME': party_name_pra
                     
                     
                 }, inplace=True)
@@ -2383,13 +2341,22 @@ def process_report_agri():
                     query = f"SELECT COMPONENT_NAME, MARGIN from AGE_MARGIN_WORKING_UAT where PARTY_ID = '{Party['party_id'][0]}'"
                     margins = extraction_db.execute_(query)
                     try:
-                        rm_margin = margins.loc[margins['component_name'] == 'RAW MATERIALS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'RAW MATERIALS INSURED', 'margin'].empty else None
-                        wip_margin = margins.loc[margins['component_name'] == 'WORK IN PROGRESS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'WORK IN PROGRESS INSURED', 'margin'].empty else None
-                        fg_margin = margins.loc[margins['component_name'] == 'FINISHED GOODS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'FINISHED GOODS INSURED', 'margin'].empty else None
-                        stores_and_spares_margin = margins.loc[margins['component_name'] == 'STOCK & STORES INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'STOCK & STORES INSURED', 'margin'].empty else None
-                        book_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS', 'margin'].empty else None
-                        upto_90_days_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 90 DAYS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 90 DAYS', 'margin'].empty else None
-                        upto_120_days_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 120 DAYS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 120 DAYS', 'margin'].empty else None
+
+                        RAW_MATERIALS_INSURED_PRA='RAW MATERIALS INSURED'
+                        WORK_IN_PROGRESS_INSURED_PRA='WORK IN PROGRESS INSURED'
+                        FINISHED_GOODS_INSURED_PRA='FINISHED GOODS INSURED'
+                        STOCK_STORES_INSURED_PRA='STOCK & STORES INSURED'
+                        BOOK_DEBTS_PRA='BOOK DEBTS'
+                        BOOK_DEBTS_UPTO_90_DAYS_PRA= 'BOOK DEBTS UPTO 90 DAYS'
+                        BOOK_DEBTS_UPTO_120_DAYS_PRA='BOOK DEBTS UPTO 120 DAYS'
+
+                        rm_margin = margins.loc[margins['component_name'] == RAW_MATERIALS_INSURED_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == RAW_MATERIALS_INSURED_PRA, 'margin'].empty else None
+                        wip_margin = margins.loc[margins['component_name'] == WORK_IN_PROGRESS_INSURED_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == WORK_IN_PROGRESS_INSURED_PRA, 'margin'].empty else None
+                        fg_margin = margins.loc[margins['component_name'] == FINISHED_GOODS_INSURED_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == FINISHED_GOODS_INSURED_PRA, 'margin'].empty else None
+                        stores_and_spares_margin = margins.loc[margins['component_name'] == STOCK_STORES_INSURED_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == STOCK_STORES_INSURED_PRA, 'margin'].empty else None
+                        book_debts_margin = margins.loc[margins['component_name'] ==  BOOK_DEBTS_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] ==  BOOK_DEBTS_PRA , 'margin'].empty else None
+                        upto_90_days_debts_margin = margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_90_DAYS_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_90_DAYS_PRA, 'margin'].empty else None
+                        upto_120_days_debts_margin = margins.loc[margins['component_name'] ==  BOOK_DEBTS_UPTO_120_DAYS_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] ==  BOOK_DEBTS_UPTO_120_DAYS_PRA, 'margin'].empty else None
                         creditors_margin = margins.loc[margins['component_name'] == 'CREDITORS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'CREDITORS', 'margin'].empty else None
 
                         
@@ -2404,8 +2371,9 @@ def process_report_agri():
                     except Exception as e:
                         logging.info(f"####exception for margins###{e}")
                 final_result = pd.DataFrame([final_result])
+                drawing_power_amount_pra='Drawing power Amount'
                 renamed_columns = {
-                    'Drawing Power': 'Drawing power Amount',
+                    'Drawing Power': drawing_power_amount_pra,
                     'Raw Materials': 'Raw materials',
                     'Total Creditors': 'Creditors',
                     'Work in Process': 'Work in progress',
@@ -2425,9 +2393,9 @@ def process_report_agri():
 
                 final_df = pd.concat([final_result, df], axis=1)
 
-            # #     
+                
                 res = res.append(final_df, ignore_index=True)
-            columns_to_drop = ['User name','customer_name','CUSTOMER_NAME',
+            columns_to_drop = [user_name_pra,'customer_name','CUSTOMER_NAME',
 
             "Total Stock", "Obsolete Stock", "Pledge Stock", "Consumable & Spares",
             "Goods in Transit", "PCFC Stock", "Inventory Financed Stock", "Domestic Stock",
@@ -2447,9 +2415,8 @@ def process_report_agri():
             # Drop the specified columns
             columns_to_drop_existing = [col for col in columns_to_drop if col in res.columns]
 
-# Drop the specified columns
+            # Drop the specified columns
             res = res.drop(columns=columns_to_drop_existing)
-            # new_row = {" Signature and Rubber stamp":"Source: "," Stock statement month ":"Source: "," DP Share Margin -CAM":"Source: "," DP Share Margin -Credit noting":"Source:"," DP Share Margin -DP letter":"Source: "," Stock ":"Source: Stock Statement "," stock margin":"Source: ","Raw materials":"Source: Stock Statement " ,"RM Margin":"Source:",  "Work in progress":"Source: Stock Statement ", "WIP Margin":"Source: ", "Finished Goods":"Source: Stock Statement ", "FG Margin":"Source: ", "stores and spares":"Source: Stock Statement ", "Stores and spares margin":"Source: ", "Book Debts & Receviables (Domestic&Export)": "Source: Stock Statement ", "Book debts Margin":"Source: ", "Upto 90 days":"Source: Stock Statement ", "Upto 90 days-Debts margin":"Source: Stock Statement ", "upto 120days":"Source: Stock Statement ", "upto 120days-Debts margin":"Source: ", "Creditors":"Source: Stock Statement ", "Credtiors margin":"Source: ", "Advance from suppliers":"Source: Stock Statement ", "Advance to suppliers":"Source: Stock Statement ", "Stock in transit":"Source: Stock Statement ", "Group company debtors":"Source: Stock Statement ", "GST receivables (tax components)": "Source: Stock Statement ", "Unbilled debtors":"Source: Stock Statement ", "Bullion stock":"Source: Stock Statement ", "Obselete stock":"Source: Stock Statement ", "under deposits/Bhishi's Scheme's":"Source: Stock Statement ", "Standard Gold":"Source: Stock Statement ", "WCL sanctioned in CAM":"Source: Stock Statement ", "WCL sanctioned in Limit module":"Source: Stock Statement ", "Unsecured utilisations":"Source: Stock Statement ", "Total utiliisations":"Source: Stock Statement ", "Drawing power Amount":"Source: Stock Statement ", "Remarks":"Source: " }                #Use the loc method to insert the new row at index 0
             new_row = {" Signature and Rubber stamp":"Source: "," Stock statement month ":"Source: "," DP Share Margin -CAM":"Source:Master "," DP Share Margin -Credit noting":"Source:Master"," DP Share Margin -DP letter":"Source:Master"," Stock ":"Source: Stock Statement "," stock margin":"Source:Master","Raw materials":"Source: Stock Statement " ,"RM Margin":"Source:Master",  "Work in progress":"Source: Stock Statement ", "WIP Margin":"Source:Master", "Finished Goods":"Source: Stock Statement ", "FG Margin":"Source:Master", "stores and spares":"Source: Stock Statement ", "Stores and spares margin":"Source:Master", "Book Debts & Receviables (Domestic&Export)": "Source: Stock Statement ", "Book debts Margin":"Source:Master", "Upto 90 days":"Source: Stock Statement ", "Upto 90 days-Debts margin":"Source: Master ", "upto 120days":"Source: Stock Statement ", "upto 120days-Debts margin":"Source:Master", "Creditors":"Source: Stock Statement ", "Credtiors margin":"Source:Master", "Advance from suppliers":"Source: Stock Statement ", "Advance to suppliers":"Source: Stock Statement ", "Stock in transit":"Source: Stock Statement ", "Group company debtors":"Source: Stock Statement ", "GST receivables (tax components)": "Source: Stock Statement ", "Unbilled debtors":"Source: Stock Statement ", "Bullion stock":"Source: Stock Statement ", "Obselete stock":"Source: Stock Statement ", "under deposits/Bhishi's Scheme's":"Source: Stock Statement ", "Standard Gold":"Source: Stock Statement ", "WCL sanctioned in CAM":"Source: Stock Statement ", "WCL sanctioned in Limit module":"Source: Stock Statement ", "Unsecured utilisations":"Source: Stock Statement ", "Total utiliisations":"Source: Stock Statement ", "Drawing power Amount":"Source: Stock Statement ", "Remarks":"Source: " }
             res.loc[-1] = new_row
             res.index = res.index + 1
@@ -2459,21 +2426,21 @@ def process_report_agri():
             filename = f'Process_Report--{formatted_date}.xlsx'
             path = f'/var/www/reports_api/reports/{filename}'
             try:
-                # logging.info(f'inside try {res}')
+                
                 writer = pd.ExcelWriter(path, engine='xlsxwriter')
                 res.to_excel(writer, sheet_name='Sheet1', index=False)
                 # Get the xlsxwriter workbook and worksheet objects
                 workbook  = writer.book
                 worksheet = writer.sheets['Sheet1']
 
-                # #Apply your desired styles to the worksheet
+               
                 # For example, setting the number format for all cells with numeric values
                 format_numeric = workbook.add_format({'num_format': '0'})
                 worksheet.set_column('A:Z', None, format_numeric)
                 writer.save()
-                # logging.info(f'inside after try {res}')
+
             except Exception as e:
-                # logging.info(f'inside except {res}')
+                
                 logging.info(f"######in exception for excel conversion error is {e}")
             given_data=res.to_dict()
             final_data = {'row_data': []}
@@ -2485,9 +2452,9 @@ def process_report_agri():
                 for i in range(len(given_data['ACE Case ID'])):
                     row_entry = {
                     'S_No': i + 1,
-                    'case_id': given_data['ACE Case ID'][i],
-                    'Party_Id': given_data['Party ID'][i],
-                    'Party_Name': given_data['Party name'][i],
+                    'case_id': given_data[case_id_pra][i],
+                    'Party_Id': given_data[ party_id_pra][i],
+                    'Party_Name': given_data[party_name_pra][i],
                     'Rules_Accuracy': given_data['Rules Accuracy'][i],
                     'Signature_and_Rubber_stamp': given_data['Signature and Rubber stamp'][i],
                     'Stock_statement_month': given_data['Stock statement month'][i],
@@ -2526,32 +2493,37 @@ def process_report_agri():
                     'WCL_sanctioned_in_Limit_module': given_data['WCL sanctioned in Limit module'][i],
                     'Unsecured_utilisations': given_data['Unsecured utilisations'][i],
                     'Total_utiliisations': given_data['Total utiliisations'][i],
-                    'Drawing_power_Amount': given_data['Drawing power Amount'][i],
+                    'Drawing_power_Amount': given_data[drawing_power_amount_pra][i],
                     'Remarks': given_data['Remarks'][i],
-                    # 'Total_debtors': given_data['Total debtors'][i],
-                    # 'User_name': given_data['User name'][i]
+                   
                 }
 
                     final_data['row_data'].append(row_entry)
-            try:
+  
+  
+            try: 
+                SUCCESS_MESSAGE_PRA='Successfully generated the report'
 
                 return_json_data = {}
-                return_json_data['message']='Successfully generated the report'
+                return_json_data['message']=SUCCESS_MESSAGE_PRA
                 return_json_data['excel_flag']= 1
                 return_json_data['flag'] = True
                 return_json_data['data'] = final_data
                 
                 data['report_data'] = return_json_data
 
-                #generate_report({'tenant_id': tenant_id, **data})
                 logging.info(f'{return_json_data}###############return_json_data')
                 return jsonify(return_json_data)
+            
+                
+
             except Exception as e:
+                FAILED_MESSAGE_PRA='Failed!!'
                 logging.info(f"error at process_Report {e}")
                 logging.debug(f"{e} ####issue")
                 return_json_data = {}
                 return_json_data['flag'] = False
-                return_json_data['message'] = 'Failed!!'
+                return_json_data['message'] =  FAILED_MESSAGE_PRA
                 
         except Exception as e:
             logging.exception(f'Something went wrong exporting data : {e}')
@@ -2564,25 +2536,27 @@ def process_report_agri():
         memory_consumed = f"{memory_consumed:.10f}"
         logging.info(f"checkpoint memory_after - {memory_after},memory_consumed - {memory_consumed}, end_time - {end_time}")
         time_consumed = str(round(end_time-start_time,3))
-    except:
-        logging.warning("Failed to calc end of ram and time")
-        logging.exception("ram calc went wrong")
+    except Exception:
+        logging.warning("######Failed to calc end of ram and time")
+        logging.exception("##ram calc went wrong")
         memory_consumed = None
         time_consumed = None
-        pass
 
     # insert audit
+         
+    
     try:
+        NEW_FILE_RECEIVED_PRA="New file received"
         audit_data = {"tenant_id": tenant_id, "user_": "", "case_id": "",
                     "api_service": "process_report_agri", "service_container": "reportsapi",
-                    "changed_data": "New file received","tables_involved": "","memory_usage_gb": str(memory_consumed), 
+                    "changed_data": NEW_FILE_RECEIVED_PRA,"tables_involved": "","memory_usage_gb": str(memory_consumed), 
                     "time_consumed_secs": time_consumed, "request_payload": json.dumps(data), 
                     "response_data": json.dumps(return_json_data), "trace_id": trace_id,
                     "session_id": "","status":json.dumps(return_json_data['flag'])}
     
         insert_into_audit(audit_data)
-    except:
-        logging.info(f"issue in the query formation")
+    except Exception:
+        logging.info("issue in the query formation")
     return jsonify(return_json_data)
 
 
