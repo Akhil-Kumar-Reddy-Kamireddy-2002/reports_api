@@ -1600,7 +1600,7 @@ def audit_report():
             logging.debug(f"{e} ####issue")
             return_json_data = {}
             return_json_data['flag'] = False
-            return_json_data['message'] = 'FAILED_MESSAGE_AR'
+            return_json_data['message'] = FAILED_MESSAGE_AR
             return jsonify(return_json_data)
     try:
         memory_after = measure_memory_usage()
@@ -1750,10 +1750,10 @@ def consolidated_report():
         extraction_db = DB('extraction', **db_config)
 
         queues_db = DB("queues", **db_config)
-
+        CR="Asia/Calcutta"
         start_date = data['start_date']
         end_date = data['end_date']
-        ist = pytz.timezone("Asia/Calcutta")
+        ist = pytz.timezone(CR)
         timestamp = datetime.now(ist)
 
         reports_name=data['ui_data']['report_name']
@@ -1765,7 +1765,7 @@ def consolidated_report():
         start_date = data['start_date']
         end_date = data['end_date']
         
-        ist = pytz.timezone("Asia/Calcutta")
+        ist = pytz.timezone(CR)
         timestamp = datetime.now(ist)
 
         timestamp1 = timestamp.strftime('%d-%m-%Y %H:%M:%S')
@@ -1809,19 +1809,19 @@ def consolidated_report():
                             """
                 df=extraction_db.execute_(query)
                 logging.info(f"query df is {df}")
-                case_id_frf='ACE Case ID'
-                party_id_frf='Party ID'
-                party_name_frf='Party name'
-                user_name_frf='User name'
-                drawing_power_amount_frf='Drawing power Amount'
-                hold_comments_frf='Hold Comments'
+                CASE_ID_FRF='ACE Case ID'
+                PARTY_ID_FRF ='Party ID'
+                PARTY_NAME_FRF ='Party name'
+                USER_NAME_FRF ='User name'
+                DRAWING_POWER_AMOUNT_FRF ='Drawing power Amount'
+                HOLD_COMMENTS_FRF ='Hold Comments'
                 df.rename(columns={
-                    'case_id': case_id_frf,
-                    'party_id': party_id_frf ,
-                    'party_name':  party_name_frf,
-                    'customer_name':user_name_frf,
-                    'drawing_power':drawing_power_amount_frf,
-                    'hold_comments':hold_comments_frf,
+                    'case_id': CASE_ID_FRF,
+                    'party_id': PARTY_ID_FRF  ,
+                    'party_name':  PARTY_NAME_FRF,
+                    'customer_name':USER_NAME_FRF,
+                    'drawing_power':DRAWING_POWER_AMOUNT_FRF,
+                    'hold_comments':HOLD_COMMENTS_FRF,
                     'rejected_comments':'Rejected Comments'
                 }, inplace=True)
                 res=[]
@@ -1849,13 +1849,23 @@ def consolidated_report():
                             query = f"SELECT COMPONENT_NAME, MARGIN from AGE_MARGIN_WORKING_UAT where PARTY_ID = '{Party['party_id'][0]}'"
                             margins = extraction_db.execute_(query)
                             try:
-                                rm_margin = margins.loc[margins['component_name'] == 'RAW MATERIALS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'RAW MATERIALS INSURED', 'margin'].empty else None
-                                wip_margin = margins.loc[margins['component_name'] == 'WORK IN PROGRESS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'WORK IN PROGRESS INSURED', 'margin'].empty else None
-                                fg_margin = margins.loc[margins['component_name'] == 'FINISHED GOODS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'FINISHED GOODS INSURED', 'margin'].empty else None
-                                stores_and_spares_margin = margins.loc[margins['component_name'] == 'STOCK & STORES INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'STOCK & STORES INSURED', 'margin'].empty else None
-                                book_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS', 'margin'].empty else None
-                                upto_90_days_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 90 DAYS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 90 DAYS', 'margin'].empty else None
-                                upto_120_days_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 120 DAYS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 120 DAYS', 'margin'].empty else None
+                                RAW_MATERIALS_INSURED_FRF ='RAW MATERIALS INSURED'
+                                WORK_IN_PROGRESS_INSURED_FRF='WORK IN PROGRESS INSURED'
+                                FINISHED_GOODS_INSURED_FRF='FINISHED GOODS INSURED'
+                                STOCK_STORES_INSURED_FRF='STOCK & STORES INSURED'
+                                BOOK_DEBTS_FRF='BOOK DEBTS'
+                                BOOK_DEBTS_UPTO_90_DAYS_FRF='BOOK DEBTS UPTO 90 DAYS'
+                                BOOK_DEBTS_UPTO_120_DAYS_FRF='BOOK DEBTS UPTO 120 DAYS'
+
+
+
+                                rm_margin = margins.loc[margins['component_name'] == RAW_MATERIALS_INSURED_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == RAW_MATERIALS_INSURED_FRF, 'margin'].empty else None
+                                wip_margin = margins.loc[margins['component_name'] == WORK_IN_PROGRESS_INSURED_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == WORK_IN_PROGRESS_INSURED_FRF, 'margin'].empty else None
+                                fg_margin = margins.loc[margins['component_name'] == FINISHED_GOODS_INSURED_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == FINISHED_GOODS_INSURED_FRF, 'margin'].empty else None
+                                stores_and_spares_margin = margins.loc[margins['component_name'] == STOCK_STORES_INSURED_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == STOCK_STORES_INSURED_FRF, 'margin'].empty else None
+                                book_debts_margin = margins.loc[margins['component_name'] == BOOK_DEBTS_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == BOOK_DEBTS_FRF, 'margin'].empty else None
+                                upto_90_days_debts_margin = margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_90_DAYS_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_90_DAYS_FRF, 'margin'].empty else None
+                                upto_120_days_debts_margin = margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_120_DAYS_FRF, 'margin'].values[0] if not margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_120_DAYS_FRF, 'margin'].empty else None
                                 creditors_margin = margins.loc[margins['component_name'] == 'CREDITORS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'CREDITORS', 'margin'].empty else None
 
                                 
@@ -1877,7 +1887,7 @@ def consolidated_report():
                         logging.info(f"Error at Printing  Json data {e}")
                 result_df = pd.DataFrame(res)
                 renamed_columns = {
-                    'Drawing Power': drawing_power_amount_frf,
+                    'Drawing Power': DRAWING_POWER_AMOUNT_FRF,
                     'Raw Materials': 'Raw materials',
                     'Total Creditors': 'Creditors',
                     'Work in Process': 'Work in progress',
@@ -1920,7 +1930,7 @@ def consolidated_report():
 
                 
 
-                columns = [ "ACE Case ID", "Party ID", "Party name", "User name", "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
+                columns = [ "ACE Case ID", "Party ID", "Party name", User_name_CR, "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
                 queue = 'accepted_queue'
                 res_columns = pd.DataFrame(columns=columns)
                 res=final_result_fun(case_ids,res_columns,queue ,case_id_db_data)
@@ -1985,10 +1995,10 @@ def consolidated_report():
                         WHERE QUEUE_LIST.QUEUE = 'rejected_queue' 
                         AND PROCESS_QUEUE.LAST_UPDATED >= TO_DATE('{start_date}', 'YYYY-MM-DD HH24:MI:SS') 
                         AND PROCESS_QUEUE.LAST_UPDATED <= TO_DATE('{end_date}', 'YYYY-MM-DD HH24:MI:SS')"""
-                
+                User_name_CR="User name"
                 case_ids = queues_db.execute_(query_case_ids).to_dict(orient="records")
                 case_id_db_data = queues_db.execute_(query_case_ids)
-                columns = [ "ACE Case ID", "Party ID", "Party name", "User name","Reject reason","Rejected Comments", "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
+                columns = [ "ACE Case ID", "Party ID", "Party name",User_name_CR,"Reject reason","Rejected Comments", "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
                 queue = 'rejected_queue'
                 res_columns = pd.DataFrame(columns=columns)
                 res=final_result_fun(case_ids,res_columns,queue,case_id_db_data)
@@ -2063,7 +2073,7 @@ def consolidated_report():
                 case_id_db_data = queues_db.execute_(query_case_ids)
                 logging.info(f"#####case_ids {case_ids}")
                 logging.info(f"#####case_id_db_data {case_id_db_data}")
-                columns = [ "ACE Case ID", "Party ID", "Party name", "User name", "Hold reason","Hold Comments","Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
+                columns = [ "ACE Case ID", "Party ID", "Party name", User_name_CR, "Hold reason","Hold Comments","Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
                 queue = 'Maker'
                 res_columns = pd.DataFrame(columns=columns)
                 res=final_result_fun(case_ids,res_columns,queue,case_id_db_data)
@@ -2261,7 +2271,8 @@ def process_report_agri():
         
         start_date = data['start_date']
         end_date = data['end_date']
-        ist = pytz.timezone("Asia/Calcutta")
+        PR= "Asia/Calcutta"
+        ist = pytz.timezone(PR)
         timestamp = datetime.now(ist)
         
         
@@ -2326,13 +2337,22 @@ def process_report_agri():
                     query = f"SELECT COMPONENT_NAME, MARGIN from AGE_MARGIN_WORKING_UAT where PARTY_ID = '{Party['party_id'][0]}'"
                     margins = extraction_db.execute_(query)
                     try:
-                        rm_margin = margins.loc[margins['component_name'] == 'RAW MATERIALS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'RAW MATERIALS INSURED', 'margin'].empty else None
-                        wip_margin = margins.loc[margins['component_name'] == 'WORK IN PROGRESS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'WORK IN PROGRESS INSURED', 'margin'].empty else None
-                        fg_margin = margins.loc[margins['component_name'] == 'FINISHED GOODS INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'FINISHED GOODS INSURED', 'margin'].empty else None
-                        stores_and_spares_margin = margins.loc[margins['component_name'] == 'STOCK & STORES INSURED', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'STOCK & STORES INSURED', 'margin'].empty else None
-                        book_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS', 'margin'].empty else None
-                        upto_90_days_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 90 DAYS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 90 DAYS', 'margin'].empty else None
-                        upto_120_days_debts_margin = margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 120 DAYS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'BOOK DEBTS UPTO 120 DAYS', 'margin'].empty else None
+
+                        RAW_MATERIALS_INSURED_PRA='RAW MATERIALS INSURED'
+                        WORK_IN_PROGRESS_INSURED_PRA='WORK IN PROGRESS INSURED'
+                        FINISHED_GOODS_INSURED_PRA='FINISHED GOODS INSURED'
+                        STOCK_STORES_INSURED_PRA='STOCK & STORES INSURED'
+                        BOOK_DEBTS_PRA='BOOK DEBTS'
+                        BOOK_DEBTS_UPTO_90_DAYS_PRA= 'BOOK DEBTS UPTO 90 DAYS'
+                        BOOK_DEBTS_UPTO_120_DAYS_PRA='BOOK DEBTS UPTO 120 DAYS'
+
+                        rm_margin = margins.loc[margins['component_name'] == RAW_MATERIALS_INSURED_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == RAW_MATERIALS_INSURED_PRA, 'margin'].empty else None
+                        wip_margin = margins.loc[margins['component_name'] == WORK_IN_PROGRESS_INSURED_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == WORK_IN_PROGRESS_INSURED_PRA, 'margin'].empty else None
+                        fg_margin = margins.loc[margins['component_name'] == FINISHED_GOODS_INSURED_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == FINISHED_GOODS_INSURED_PRA, 'margin'].empty else None
+                        stores_and_spares_margin = margins.loc[margins['component_name'] == STOCK_STORES_INSURED_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == STOCK_STORES_INSURED_PRA, 'margin'].empty else None
+                        book_debts_margin = margins.loc[margins['component_name'] ==  BOOK_DEBTS_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] ==  BOOK_DEBTS_PRA , 'margin'].empty else None
+                        upto_90_days_debts_margin = margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_90_DAYS_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] == BOOK_DEBTS_UPTO_90_DAYS_PRA, 'margin'].empty else None
+                        upto_120_days_debts_margin = margins.loc[margins['component_name'] ==  BOOK_DEBTS_UPTO_120_DAYS_PRA, 'margin'].values[0] if not margins.loc[margins['component_name'] ==  BOOK_DEBTS_UPTO_120_DAYS_PRA, 'margin'].empty else None
                         creditors_margin = margins.loc[margins['component_name'] == 'CREDITORS', 'margin'].values[0] if not margins.loc[margins['component_name'] == 'CREDITORS', 'margin'].empty else None
 
                         
@@ -2499,7 +2519,7 @@ def process_report_agri():
                 logging.debug(f"{e} ####issue")
                 return_json_data = {}
                 return_json_data['flag'] = False
-                return_json_data['message'] = ' FAILED_MESSAGE_PRA'
+                return_json_data['message'] =  FAILED_MESSAGE_PRA
                 
         except Exception as e:
             logging.exception(f'Something went wrong exporting data : {e}')
