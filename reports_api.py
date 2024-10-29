@@ -762,8 +762,8 @@ def generate_reports():
         logging.info(f"debugging report_id from front_end : {report_id}")
 
         # Generate file name if not given
-        a="Asia/Calcutta"
-        ist = pytz.timezone(a)
+        ASIA_GR="Asia/Calcutta"
+        ist = pytz.timezone( ASIA_GR)
         timestamp = datetime.now(ist)
         timestamp_actual = timestamp
         timestamp1 = timestamp.strftime('%d-%m-%Y %H:%M:%S')
@@ -1574,7 +1574,7 @@ def audit_report():
             
             logging.info(f"outputs##{outputs}")
 
-            SUCCESS_MESSAGE_AR = 'Successfully generated the report'
+            
 
             for output in outputs:
                 output[ CASE_CREATION_TIME_STAMP] = str(output[ CASE_CREATION_TIME_STAMP])
@@ -1584,6 +1584,7 @@ def audit_report():
                 output[TOTAL_HANDLING_TIME] = str(output[TOTAL_HANDLING_TIME])
             return_json_data = {}
             logging.info(f'{return_json_data}###return_json_data#########return_json_data')
+            SUCCESS_MESSAGE_AR = 'Successfully generated the report'
             return_json_data['message']=SUCCESS_MESSAGE_AR
             return_json_data['excel_flag']= 1
             return_json_data['flag'] = True
@@ -1593,9 +1594,10 @@ def audit_report():
             logging.info(f'{return_json_data}###############return_json_data')
 
 
-            FAILED_MESSAGE_AR = 'Failed!!'
+           
             
         except Exception as e:
+            FAILED_MESSAGE_AR = 'Failed!!'
             logging.info(f"error at audit_Report {e}")
             logging.debug(f"{e} ####issue")
             return_json_data = {}
@@ -1618,8 +1620,9 @@ def audit_report():
         
 
     # insert audit
-    NEW_FILE_RECEIVED_AR = "New file received"
+   
     try:
+        NEW_FILE_RECEIVED_AR = "New file received"
         audit_data = {"tenant_id": tenant_id, "user_": "", "case_id": "",
                         "api_service": "folder_monitor", "service_container": "reportsapi",
                         "changed_data": NEW_FILE_RECEIVED_AR,"tables_involved": "","memory_usage_gb": str(memory_consumed), 
@@ -1930,7 +1933,7 @@ def consolidated_report():
 
                 
 
-                columns = [ "ACE Case ID", "Party ID", "Party name", User_name_CR, "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
+                columns = [ "ACE Case ID", "Party ID", "Party name", User_nameCR, "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
                 queue = 'accepted_queue'
                 res_columns = pd.DataFrame(columns=columns)
                 res=final_result_fun(case_ids,res_columns,queue ,case_id_db_data)
@@ -1995,10 +1998,10 @@ def consolidated_report():
                         WHERE QUEUE_LIST.QUEUE = 'rejected_queue' 
                         AND PROCESS_QUEUE.LAST_UPDATED >= TO_DATE('{start_date}', 'YYYY-MM-DD HH24:MI:SS') 
                         AND PROCESS_QUEUE.LAST_UPDATED <= TO_DATE('{end_date}', 'YYYY-MM-DD HH24:MI:SS')"""
-                User_name_CR="User name"
+                User_nameCR="User name"
                 case_ids = queues_db.execute_(query_case_ids).to_dict(orient="records")
                 case_id_db_data = queues_db.execute_(query_case_ids)
-                columns = [ "ACE Case ID", "Party ID", "Party name",User_name_CR,"Reject reason","Rejected Comments", "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
+                columns = [ "ACE Case ID", "Party ID", "Party name",User_nameCR,"Reject reason","Rejected Comments", "Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
                 queue = 'rejected_queue'
                 res_columns = pd.DataFrame(columns=columns)
                 res=final_result_fun(case_ids,res_columns,queue,case_id_db_data)
@@ -2073,7 +2076,7 @@ def consolidated_report():
                 case_id_db_data = queues_db.execute_(query_case_ids)
                 logging.info(f"#####case_ids {case_ids}")
                 logging.info(f"#####case_id_db_data {case_id_db_data}")
-                columns = [ "ACE Case ID", "Party ID", "Party name", User_name_CR, "Hold reason","Hold Comments","Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
+                columns = [ "ACE Case ID", "Party ID", "Party name", User_nameCR, "Hold reason","Hold Comments","Stock", "Stock margin", "Raw materials", "RM Margin", "Work in progress", "WIP Margin", "Finished Goods", "FG Margin", "Stores and spares", "Stores and spares margin", "Book Debts & Receivables (Domestic&Export)", "Book debts Margin", "Upto 90 days", "Upto 90 days-Debts margin", "Upto 120 days", "Upto 120 days-Debts margin", "Creditors", "Creditors margin", "Advance from suppliers", "Advance to suppliers", "Stock in transit", "Group company debtors", "GST receivables (tax components)", "Unbilled debtors", "Bullion stock", "Obsolete stock", "Under deposits/Bhishi's Scheme's", "Standard Gold", "WCL sanctioned in CAM", "WCL sanctioned in Limit module", "Unsecured utilizations", "Total utilizations", "Drawing power Amount", "Remarks" ]
                 queue = 'Maker'
                 res_columns = pd.DataFrame(columns=columns)
                 res=final_result_fun(case_ids,res_columns,queue,case_id_db_data)
@@ -2084,7 +2087,7 @@ def consolidated_report():
                 res = res.drop(columns=['COMMENTS',hold_comments_cr])
 
 
-                SUCCESS_MESSAGE_CR='Successfully generated the report'
+                
 
                 # Iterating through each entry in the given data dictionary
                 for i in range(len(given_data[ace_case_id_cr])):
@@ -2215,9 +2218,10 @@ def consolidated_report():
         
 
     # insert audit
-    NEW_FILE_RECEIVED_CR = "New file received"
+    
 
     try:
+        NEW_FILE_RECEIVED_CR = "New file received"
         audit_data = {"tenant_id": tenant_id, "user_": "", "case_id": "",
                         "api_service": "consolidated_report", "service_container": "reportsapi",
                         "changed_data": NEW_FILE_RECEIVED_CR,"tables_involved": "","memory_usage_gb": str(memory_consumed), 
@@ -2540,8 +2544,9 @@ def process_report_agri():
 
     # insert audit
          
-    NEW_FILE_RECEIVED_PRA="New file received"
+    
     try:
+        NEW_FILE_RECEIVED_PRA="New file received"
         audit_data = {"tenant_id": tenant_id, "user_": "", "case_id": "",
                     "api_service": "process_report_agri", "service_container": "reportsapi",
                     "changed_data": NEW_FILE_RECEIVED_PRA,"tables_involved": "","memory_usage_gb": str(memory_consumed), 
